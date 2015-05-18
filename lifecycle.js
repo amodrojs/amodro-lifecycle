@@ -173,7 +173,7 @@ function Lifecycle(parent) {
      * @return {Promise}
      */
     load: function(normalizedId, location, factorySequence) {
-      return (this.waiting[normalizedId] = this.fetch(location)
+      return (this.waiting[normalizedId] = this.fetch(normalizedId, location)
       .then(function(source) {
         try {
           source = this.translate(normalizedId, location, source);
@@ -297,7 +297,7 @@ function Lifecycle(parent) {
       return id + '.js';
     },
 
-    fetch: function(location) {
+    fetch: function(id, location) {
       // async
       return Promise.resolve('');
     },

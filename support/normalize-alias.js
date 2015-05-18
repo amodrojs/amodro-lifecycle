@@ -1,7 +1,9 @@
 // Assumptions: wants a getOwn() function in scope.
-function normalizeAlias(nameParts, refParts, alias) {
+function normalizeAlias(nameParts, refParts, config) {
   var i, j, nameSegment, aliasValue, foundAlias, foundI, foundStarAlias,
       starI;
+
+  var alias = config.alias;
 
   //Apply alias config if appropriate.
   var starAlias = alias && alias['*'];

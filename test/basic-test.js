@@ -18,7 +18,7 @@ var overrides = {
     return this.baseUrl + '/' + id + '.js';
   },
 
-  fetch: function(location) {
+  fetch: function(id, location) {
     // async
     return new Promise(function(resolve, reject) {
       fs.readFile(location, 'utf8', function(err, text) {
