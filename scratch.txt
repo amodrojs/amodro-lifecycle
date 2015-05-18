@@ -1,11 +1,11 @@
 
 * translate hook async, to allow node-style "if .cs file name, load coffeescript transpiler" sort of thing?
 
-* Is there an factory sequence issue because .depend is async? Does it matter as far as cycle resolution? Initial thought is no.
-* how to handle recoverable errors, paths fallbacks? Maybe promises too opaque for that.
 * In general, how to handle errors? Test they bubble correctly, get reflected in factorySequence correctly.
 
+* cycle detection hook, for info uses only, override could decide to throw.
 
+* try out parent/child relationship, make sure top is used for lifecycle hooks.
 
 Test:
 

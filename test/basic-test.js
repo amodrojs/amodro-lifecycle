@@ -73,13 +73,12 @@ describe('basic', function() {
     var lc = new Lifecycle();
     lc.baseUrl = path.join(sourceDir, 'a-b-c');
 
-    lc.use('a').then(function() {
-      var a = lc.getModule('a');
+    lc.use('a').then(function(a) {
       assert.equal(a.name, 'a');
       assert.equal(a.b.name, 'b');
       assert.equal(a.b.c.name, 'c');
       done();
-    }, function(err) {
+    }).catch(function(err) {
       done(err);
     });
   });

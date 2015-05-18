@@ -7,7 +7,7 @@ Assumes the JS environment has these capabilities:
 function Lifecycle(parent) {
   'use strict';
   this.parent = parent;
-  this.top = parent;
+  this.top = parent ? parent.top : this;
   this.modules = {};
 
   /*
@@ -39,6 +39,12 @@ function Lifecycle(parent) {
       return hasProp(obj, prop) && obj[prop];
   }
 
+  function moduleError(id, err) {
+    var newError = new Error(id + ' failed: ' + err);
+    newError.originalError = err;
+    throw newError;
+  }
+
   Lifecycle.prototype = {
     getWaiting: function(normalizedId) {
       var waiting = getOwn(this.waiting, normalizedId);
@@ -64,16 +70,31 @@ function Lifecycle(parent) {
       return mod || undefined;
     },
 
-// use to bootstrap loading. The promise return from this does not
-// return anything. At the end of resolution, use this.getModule(normalizedId)
-// to get the final module value(?)
+    /**
+     * Triggers loading and resolution of modules. Outside callers of this
+     * function should only pass id and refId. factorySequence is used
+     * internally to track recursive tracing of modules and proper cycle
+     * breaking.
+     * @param  {String} id              The string ID of the module
+     * @param  {String} refId           A reference module ID, used to normalize
+     * the id value to an absolute ID.
+     * @param  {Array} [factorySequence] Used internally to track execution
+     * order based on dependency tree.
+     * @return {Promise}                 Promise, resolves to module ID value.
+     */
     use: function(id, refId, factorySequence) {
       return new Promise(function(resolve, reject) {
-        var normalizedId = this.normalize(id, refId);
+        var normalizedId;
+        try {
+          normalizedId = this.top.normalize(id, refId);
+        } catch (e) {
+          moduleError(id + ', ' + refId, e);
+        }
 
         // If already defined, just resturn the module.
-        if (hasProp(this.modules, normalizedId)) {
-          return resolve(this.modules[normalizedId]);
+        var moduleValue = this.getModule(normalizedId);
+        if (moduleValue) {
+          return resolve(moduleValue);
         }
 
         if (!factorySequence) {
@@ -81,8 +102,7 @@ function Lifecycle(parent) {
             desc: (refId || '[Top]') + ' asking for ' + id,
             depCount: 0,
             depOrder: [],
-            depIds: {},
-            errors: []
+            depIds: {}
           });
 
           // Indicate refId as already being in the factorySequence, so
@@ -99,91 +119,103 @@ function Lifecycle(parent) {
           factorySequence.depIds[normalizedId];
         }
 
-        var oldRes = resolve,
-            oldRej = reject;
+        var oldRes = resolve;
 
         resolve = function(value) {
           this.factorySequenceDepComplete(factorySequence);
-          oldRes(value);
+          oldRes(this.getModule(normalizedId));
         }.bind(this);
 
-        reject = function (err) {
-          factorySequence.errors.push({
-            desc: (refId || '[Top]') + ' asking for ' + id,
-            error: err
-          });
-          this.factorySequenceDepComplete(factorySequence);
-
-          oldRej(err);
-        }.bind(this);
-
-        var waiting = this.getWaiting(normalizedId);
-        if (waiting) {
-          return waiting.then(resolve, reject);
+        var waiting;
+        try {
+          waiting = this.getWaiting(normalizedId);
+        } catch (e) {
+          moduleError(normalizedId, e);
         }
 
-        var location = this.locate(normalizedId);
+        if (waiting) {
+          return waiting.then(resolve).catch(reject);
+        }
 
-        (this.parent || this).load(normalizedId, location, factorySequence)
-        .then(resolve, reject);
+        var location = this.top.locate(normalizedId);
+
+        this.top.load(normalizedId, location, factorySequence)
+        .then(resolve).catch(reject);
       }.bind(this));
     },
 
+    /**
+     * Used internally by lifecycle to complete the load of a resource.
+     * @param  {String} normalizedId
+     * @param  {String} location
+     * @param  {Array} factorySequence
+     * @return {Promise}
+     */
     load: function(normalizedId, location, factorySequence) {
-      var loaded = this.fetch(location)
+      return (this.waiting[normalizedId] = this.fetch(location)
       .then(function(source) {
-        source = this.translate(normalizedId, location, source);
+        try {
+          source = this.translate(normalizedId, location, source);
 
-// The evaluate step should make sure to insert an entry in
-// this.registry.
-        // Some cases, like script tag-based loading, do not have source to
-        // evaluate, hidden by browser security restrictions from seeing the
-        // source.
-        if (source) {
-          this.evaluate(normalizedId, location, source);
-        }
+          // Some cases, like script tag-based loading, do not have source to
+          // evaluate, hidden by browser security restrictions from seeing the
+          // source.
+          if (source) {
+            this.evaluate(normalizedId, location, source);
+          }
 
-        var registered = getOwn(this.registry, normalizedId);
-        if (!registered) {
-          // Could be a script with no formal dependencies or exports.
-          return [];
-        }
+          var registered = getOwn(this.registry, normalizedId);
+          if (!registered) {
+            // Could be a script with no formal dependencies or exports.
+            return [];
+          }
 
-        // Dependencies should not be normalized yet. Allow an async step here
-        // to allow mechanisms, like AMD loader plugins, to async load plugins
-        // before absolute resolving the IDs.
-        if (registered.deps) {
-          return this.depend(normalizedId, registered.deps);
+          // Dependencies should not be normalized yet. Allow an async step here
+          // to allow mechanisms, like AMD loader plugins, to async load plugins
+          // before absolute resolving the IDs.
+          if (registered.deps) {
+            return this.depend(normalizedId, registered.deps);
+          }
+        } catch (e) {
+          moduleError(normalizedId, e);
         }
       }.bind(this))
       .then(function (deps) {
         return new Promise.all(deps.map(function(depId) {
           return this.use(depId, normalizedId, factorySequence);
         }.bind(this)));
-      }.bind(this));
-
-      this.waiting[normalizedId] = new Promise(function(resolve, reject) {
-        loaded.then(resolve, reject);
-      });
-
-      return this.waiting[normalizedId];
+      }.bind(this)));
     },
 
+    /**
+     * Used internally to evaluate the source a of module. May not apply in some
+     * module situations, like AMD modules loaded via script tags. Can be
+     * overridden if execution should happen differently. For instance, in node,
+     * perhaps using the vm module to execute the script.
+     *
+     * The result of the execution should place result in a this.registry entry,
+     * if the module has dependencies and wants to export a specific module
+     * value.
+     *
+     * @param  {String} normalizedId
+     * @param  {String} location
+     * @param  {String} source
+     */
     evaluate: function(normalizedId, location, source) {
       exec(this, normalizedId, location, source);
     },
 
+    /**
+     * Used in internally. Should not be called directly. When a dependency
+     * loads, checks to see if a whole dependency chain is loaded, and if so,
+     * calls the factory functions based on the depOrder specified in the
+     * factorySequence.
+     * @param  {Array} factorySequence
+     */
     factorySequenceDepComplete: function(factorySequence) {
       factorySequence.depCount -= 1;
       if (factorySequence.depCount !== 0) {
         return;
-      }
-
-//todo: check that this error pathway works out.
-      if (factorySequence.errors.length) {
-        var error = new Error('Errors in module resolution. ' +
-                             'Check factorySequence.error property for detail');
-        error.factorySequence = factorySequence;
       }
 
       // Sequences are now complete, execute factories for the dependency chain
@@ -199,11 +231,13 @@ function Lifecycle(parent) {
           continue;
         }
 
-//todo: confirm that a throw in here is bubbled up correctly. Is there a way
-//to reset/retry? Maybe not for now.
-        this.modules[depId] = this.instantiate(depId,
-                                               registered.deps,
-                                               registered.factory);
+        try {
+          this.modules[depId] = this.instantiate(depId,
+                                                 registered.deps,
+                                                 registered.factory);
+        } catch (e) {
+          moduleError(depId, e);
+        }
       }
 
       // Clean up.
