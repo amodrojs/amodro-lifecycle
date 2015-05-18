@@ -55,11 +55,18 @@ function Lifecycle(parent) {
     },
 
     getRegistered: function(normalizedId) {
-      var registered = getOwn(this.registry, normalizedId);
-      if (!registered) {
-        registered = this.parent && this.parent.getRegistered(normalizedId);
+      var record,
+          registered = getOwn(this.registry, normalizedId);
+
+      if (registered) {
+        record = {
+          instance: this,
+          registered: registered
+        };
+      } else if (this.parent) {
+        record = this.parent.getRegistered(normalizedId);
       }
-      return registered || undefined;
+      return record;
     },
 
     getModule: function(normalizedId) {
@@ -137,6 +144,20 @@ function Lifecycle(parent) {
           return waiting.then(resolve).catch(reject);
         }
 
+        // No waiting record, but could have a registered entry from a bulk
+        // module load, waiting for a top level dependency chain to activate
+        // and trace dependencies.
+        var record = this.getRegistered(normalizedId);
+        if (record) {
+          var registered = record.registered;
+          var p = record.lifecycle.waiting[normalizedId] = registered.deps &&
+            registered.deps.length ?
+            this.top.depend(normalizedId, registered.deps) :
+            Promise.resolve();
+
+          return p.then(resolve).catch(reject);
+        }
+
         var location = this.top.locate(normalizedId);
 
         this.top.load(normalizedId, location, factorySequence)
@@ -165,15 +186,13 @@ function Lifecycle(parent) {
           }
 
           var registered = getOwn(this.registry, normalizedId);
-          if (!registered) {
+          if (!registered || !registered.deps || !registered.deps.length) {
             // Could be a script with no formal dependencies or exports.
             return [];
-          }
-
-          // Dependencies should not be normalized yet. Allow an async step here
-          // to allow mechanisms, like AMD loader plugins, to async load plugins
-          // before absolute resolving the IDs.
-          if (registered.deps) {
+          } else {
+            // Dependencies should not be normalized yet. Allow an async step
+            // here to allow mechanisms, like AMD loader plugins, to async load
+            // plugins before absolute resolving the IDs.
             return this.depend(normalizedId, registered.deps);
           }
         } catch (e) {
@@ -185,6 +204,27 @@ function Lifecycle(parent) {
           return this.use(depId, normalizedId, factorySequence);
         }.bind(this)));
       }.bind(this)));
+    },
+
+    /**
+     * Use this to register a module for resolution without going through the
+     * load steps. Useful for cases like multiple inlined modules in a file,
+     * where they will not need to be loaded from the network.
+     * @param {String} normalizedId
+     * @param {Array} deps
+     * @param {Function} factory
+     */
+    addToRegistry: function(normalizedId, deps, factory) {
+      // Favor this registry vs asking up the parent chain, to support local
+      // module definitions.
+      if (!hasProp(this.registry, normalizedId)) {
+        var entry = {
+          deps: deps,
+          factory: factory
+        };
+
+        this.registry[normalizedId] = entry;
+      }
     },
 
     /**
@@ -223,7 +263,7 @@ function Lifecycle(parent) {
       var order = factorySequence.depOrder;
       for (var i = 0; i < order.length; i++) {
         var depId = order[i],
-            registered = this.getRegistered(depId);
+            registered = this.getRegistered(depId).registered;
 
         //registered may not exist, dependency could have already been handled
         //by a different factorySequence, and that is OK.

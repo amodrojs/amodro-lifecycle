@@ -1,3 +1,6 @@
+* test addToRegistry
+
+* For addToRegistry local module definitions, are they all added to registry before one is traced that may want it? Also, that a local definition wins over outer one.
 
 * translate hook async, to allow node-style "if .cs file name, load coffeescript transpiler" sort of thing?
 
@@ -6,6 +9,9 @@
 * cycle detection hook, for info uses only, override could decide to throw.
 
 * try out parent/child relationship, make sure top is used for lifecycle hooks.
+
+
+* packages config support: just put in a register for the package name pointing to main module, then a paths config?
 
 Test:
 
