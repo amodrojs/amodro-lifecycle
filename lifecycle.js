@@ -9,15 +9,7 @@ function Lifecycle(parent) {
   this.parent = parent;
   this.top = parent ? parent.top : this;
   this.modules = {};
-
-  /*
-  Values are: {
-    deps: [],
-    factory: function() {}
-  }
-   */
   this.registry = {};
-
   this.waiting = {};
   this.factorySequences = [];
 }
