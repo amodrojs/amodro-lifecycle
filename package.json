@@ -2,7 +2,7 @@
   "name": "amodro-lifecycle",
   "version": "0.0.0",
   "description": "JS module loader lifecycle engine. Used to drive specific module system loaders",
-  "main": "lifecycle.js",
+  "main": "lifecycle-node.js",
   "scripts": {
     "test": "mocha test"
   },

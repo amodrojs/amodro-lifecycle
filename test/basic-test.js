@@ -5,17 +5,12 @@
 var assert = require('assert'),
     fs = require('fs'),
     path = require('path'),
+    Lifecycle = require('../lifecycle-node'),
     sourceDir = path.join(__dirname, 'source');
 
 if (typeof Promise === 'undefined') {
-  var Promise = require('./support/prim');
+  var Promise = require('../support/prim');
 }
-
-// Creates Lifecycle constructor function.
-var lifecyclePath = path.join(__dirname, '..', 'lifecycle.js');
-var lifecycleSource = fs.readFileSync(lifecyclePath, 'utf8');
-eval(lifecycleSource + 'global.Lifecycle = Lifecycle');
-var Lifecycle = global.Lifecycle;
 
 var overrides = {
   locate: function(id) {
