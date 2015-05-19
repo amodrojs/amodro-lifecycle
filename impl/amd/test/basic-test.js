@@ -10,11 +10,11 @@ var assert = require('assert'),
 
 describe('basic', function() {
   it('a-b-c', function(done) {
-    var l = createLoader({
+    var loader = createLoader({
       baseUrl: path.join(sourceDir, 'a-b-c')
     });
 
-    l(['a'], function(a) {
+    loader(['a'], function(a) {
       assert.equal(a.name, 'a');
       assert.equal(a.b.name, 'b');
       assert.equal(a.b.c.name, 'c');
@@ -25,9 +25,7 @@ describe('basic', function() {
   });
 
   it('inline', function(done) {
-    var l = createLoader({
-      baseUrl: path.join(sourceDir, 'a-b-c')
-    });
+    var loader = createLoader();
 
     define('foo', {
       name: 'foo'
@@ -53,7 +51,7 @@ describe('basic', function() {
       };
     });
 
-    l(['foo', 'bar', 'baz'], function(foo, bar, baz) {
+    loader(['foo', 'bar', 'baz'], function(foo, bar, baz) {
       assert.equal('foo', foo.name);
       assert.equal('bar', bar.name);
       assert.equal('baz', baz.name);
@@ -62,6 +60,52 @@ describe('basic', function() {
         assert.equal('bar', bar.name);
         done();
       });
+    }).catch(function(err) {
+      done(err);
+    });
+  });
+
+  it('inline-circular', function(done) {
+    var loader = createLoader();
+
+    define('a', ['b', 'require'], function (b, require) {
+      return {
+        name: 'a',
+        getB: function () {
+          return require('b');
+        }
+      };
+    });
+
+    define('b', ['a', 'require'], function (a, require) {
+      return {
+        name: 'b',
+        getA: function () {
+          return require('a');
+        }
+      };
+    });
+
+    define('c', ['require', 'exports', 'd'], function (require, exports) {
+      exports.name = 'c',
+      exports.d = require('d');
+    });
+
+    define('d', ['require', 'exports', 'c'], function (require, exports) {
+      exports.name = 'd',
+      exports.c = require('c');
+    });
+
+    loader(['a', 'c', 'd'], function (a, c, d) {
+      var b = a.getB();
+      assert.equal('a', a.name);
+      assert.equal('b', b.name);
+      assert.equal('a', b.getA().name);
+      assert.equal('c', c.name);
+      assert.equal('d', c.d.name);
+      assert.equal('d', d.name);
+      assert.equal('c', d.c.name);
+      done();
     }).catch(function(err) {
       done(err);
     });

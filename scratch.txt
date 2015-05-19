@@ -1,12 +1,8 @@
 * With no exports object defined get: Error: baz failed: TypeError: Cannot set property 'name' of undefined, but the trace is not usable. Perhaps instead of eval while in node, use vm, does that give good context?
 
-* test addToRegistry
-
 * For addToRegistry: does local definition win over outer one?
 
 * locate: pass in file extension? How would that work?
-
-* cycle detection hook, for info uses only, override could decide to throw.
 
 * try out parent/child relationship, make sure top is used for lifecycle hooks.
 

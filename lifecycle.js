@@ -116,10 +116,12 @@ function Lifecycle(parent) {
           }
         }
 
-        if (!hasProp(factorySequence.depIds, normalizedId)) {
+        if (hasProp(factorySequence.depIds, normalizedId)) {
+          this.cycleDetected(normalizedId, factorySequence.depOrder);
+        } else {
           factorySequence.depCount += 1;
           factorySequence.depOrder.unshift(normalizedId);
-          factorySequence.depIds[normalizedId];
+          factorySequence.depIds[normalizedId] = true;
         }
 
         var oldRes = resolve;
@@ -151,7 +153,11 @@ function Lifecycle(parent) {
             this.top.callDepend(normalizedId, registered.deps) :
             Promise.resolve();
 
-          return p.then(resolve).catch(reject);
+          return p.then(function(deps) {
+            return this.useNormalizedDeps(normalizedId, deps, factorySequence);
+          }.bind(this))
+          .then(resolve)
+          .catch(reject);
         }
 
         var location = this.top.locate(normalizedId);
@@ -196,13 +202,17 @@ function Lifecycle(parent) {
         }
       }.bind(this))
       .then(function (deps) {
-        if (!deps.length) {
-          return;
-        }
+        return this.useNormalizedDeps(normalizedId, deps, factorySequence);
+      }.bind(this)));
+    },
 
-        return new Promise.all(deps.map(function(depId) {
-          return this.use(depId, normalizedId, factorySequence);
-        }.bind(this)));
+    useNormalizedDeps: function(normalizedId, deps, factorySequence) {
+      if (!deps || !deps.length) {
+        return;
+      }
+
+      return new Promise.all(deps.map(function(depId) {
+        return this.use(depId, normalizedId, factorySequence);
       }.bind(this)));
     },
 
@@ -302,6 +312,11 @@ function Lifecycle(parent) {
       if (index !== -1) {
         this.factorySequences.splice(index, 1);
       }
+    },
+
+    // Implement this if you want to log when cycles occur. If this method
+    // throws, it will put the loading into a failure state.
+    cycleDetected: function(id, cycleOrder) {
     },
 
     normalize: function(id, refId) {
