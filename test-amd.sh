@@ -1,2 +1,1 @@
-node impl/amd/build.js && node_modules/.bin/mocha impl/amd/test
-
+node impl/amd/build.js && find ./impl/amd/test -name '*test.js' | xargs node_modules/.bin/mocha -R spec

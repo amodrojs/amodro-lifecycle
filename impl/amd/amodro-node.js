@@ -756,8 +756,7 @@ function normalizeAlias(nameParts, refParts, config) {
   var protoMethods = {
     // START overrides
     cycleDetected: function(id, cycleOrder) {
-      throw new Error('cycle');
-      //console.log('Cycle detected: ' + id + ',' + cycleOrder);
+      console.log('Cycle detected: ' + id + ',' + cycleOrder);
     },
 
     normalize: function(id, refId) {

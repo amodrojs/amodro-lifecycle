@@ -5,7 +5,7 @@
   "main": "lifecycle-node.js",
   "scripts": {
     "test": "mocha test",
-    "test-amd": "node impl/amd/build.js && mocha impl/amd/test"
+    "test-amd": "node impl/amd/build.js && find ./impl/amd/test -name '*test.js' | xargs mocha -R spec"
   },
   "repository": {
     "type": "git",
