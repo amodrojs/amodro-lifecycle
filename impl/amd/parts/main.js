@@ -15,6 +15,11 @@ var amodro, define;
 
   function makeRequire(instance, refId) {
     function require(deps, callback, errback) {
+      if (typeof deps === 'string') {
+        var normalizedDepId = instance.top.normalize(deps, refId);
+        return instance.getModule(normalizedDepId, true);
+      }
+
       var p = Promise.all(deps.map(function(dep) {
         return instance.use(dep, refId);
       }));
@@ -85,7 +90,8 @@ var amodro, define;
       var usesExports = false,
           usesModule = false;
 
-      var ret = factory(normalizedDeps.map(function(dep) {
+//todo: use exports as the call context, to match node
+      var ret = factory.apply(undefined, normalizedDeps.map(function(dep) {
         if (dep === 'require') {
           return makeRequire(this, dep);
         } else if (dep === 'exports') {
@@ -121,7 +127,7 @@ var amodro, define;
 
         // Normalize define call to id, deps, factory.
         if (def.length === 1) {
-          def[0] = vary;
+          vary = def[0];
         } else if (def.length === 2) {
           if (def[0] === 'string') {
             // either id, vary or id, deps
@@ -170,20 +176,18 @@ var amodro, define;
           }
           this.addToRegistry(id, deps, fn);
         } else {
-          anon.push({
-            deps: deps,
-            factory: fn
-          });
+          anon.push([deps, fn]);
         }
       }.bind(this));
 
       if (anon.length) {
         for (var i = 0; i < anon.length; i++) {
+          var anonEntry = anon[i];
           if (i === anon.length - 1 && !foundId) {
-            this.addToRegistry(normalizedId, anon[0], anon[1]);
+            this.addToRegistry(normalizedId, anonEntry[0], anonEntry[1]);
           } else {
             console.error('Mismatched define. Ignoring, but a sign of a ' +
-                          'loading setup problem: ' + anon[i]);
+                          'loading setup problem: ' + anonEntry);
           }
         }
       }
@@ -213,6 +217,10 @@ var amodro, define;
     this.config = {
       baseUrl: './'
     };
+
+    // Seed entries for special dependencies so they are not requested by
+    // lifecycle.
+    this.modules.require = this.modules.exports = this.modules.module = {};
   }
 
   Loader.prototype = Lifecycle.prototype;

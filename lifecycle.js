@@ -61,12 +61,16 @@ function Lifecycle(parent) {
       return record;
     },
 
-    getModule: function(normalizedId) {
-      var mod = getOwn(this.modules, normalizedId);
-      if (!mod) {
-        mod = this.parent && this.parent.getModule(normalizedId);
+    getModule: function(normalizedId, throwOnMiss) {
+      if (hasProp(this.modules, normalizedId)) {
+        return this.modules[normalizedId];
+      } else if (this.parent) {
+        return this.parent.getModule(normalizedId, throwOnMiss);
       }
-      return mod || undefined;
+
+      if (throwOnMiss) {
+        throw new Error(normalizedId + ' is not set yet.');
+      }
     },
 
     /**
@@ -144,7 +148,7 @@ function Lifecycle(parent) {
           var registered = record.registered;
           var p = record.lifecycle.waiting[normalizedId] = registered.deps &&
             registered.deps.length ?
-            this.top.depend(normalizedId, registered.deps) :
+            this.top.callDepend(normalizedId, registered.deps) :
             Promise.resolve();
 
           return p.then(resolve).catch(reject);
@@ -185,13 +189,17 @@ function Lifecycle(parent) {
             // Dependencies should not be normalized yet. Allow an async step
             // here to allow mechanisms, like AMD loader plugins, to async load
             // plugins before absolute resolving the IDs.
-            return this.depend(normalizedId, registered.deps);
+            return this.callDepend(normalizedId, registered.deps);
           }
         } catch (e) {
           moduleError(normalizedId, e);
         }
       }.bind(this))
       .then(function (deps) {
+        if (!deps.length) {
+          return;
+        }
+
         return new Promise.all(deps.map(function(depId) {
           return this.use(depId, normalizedId, factorySequence);
         }.bind(this)));
@@ -217,6 +225,23 @@ function Lifecycle(parent) {
 
         this.registry[normalizedId] = entry;
       }
+    },
+
+    /**
+     * Calls the depend function, then normalizes the dependency IDs before
+     * resolving.
+     * @param  {String} normalizedId
+     * @param  {Array} deps
+     * @return {Promise}
+     */
+    callDepend: function(normalizedId, deps) {
+      return this.depend(normalizedId, deps).then(function(deps) {
+        var normalizedDeps = deps.map(function(depId) {
+          return this.normalize(depId, normalizedId);
+        }.bind(this));
+
+        return (this.registry[normalizedId].deps = normalizedDeps);
+      }.bind(this));
     },
 
     /**

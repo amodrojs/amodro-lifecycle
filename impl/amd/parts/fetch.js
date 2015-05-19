@@ -8,7 +8,8 @@ amodro.fetch = function(normalizedId, location, lifecycle) {
         if (err) {
           reject(err);
         } else {
-          resolve(text);
+          // Do not return the text as it has already been handled.
+          resolve('');
         }
       });
     });

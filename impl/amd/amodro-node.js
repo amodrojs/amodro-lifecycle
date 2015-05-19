@@ -298,12 +298,16 @@ function Lifecycle(parent) {
       return record;
     },
 
-    getModule: function(normalizedId) {
-      var mod = getOwn(this.modules, normalizedId);
-      if (!mod) {
-        mod = this.parent && this.parent.getModule(normalizedId);
+    getModule: function(normalizedId, throwOnMiss) {
+      if (hasProp(this.modules, normalizedId)) {
+        return this.modules[normalizedId];
+      } else if (this.parent) {
+        return this.parent.getModule(normalizedId, throwOnMiss);
       }
-      return mod || undefined;
+
+      if (throwOnMiss) {
+        throw new Error(normalizedId + ' is not set yet.');
+      }
     },
 
     /**
@@ -381,7 +385,7 @@ function Lifecycle(parent) {
           var registered = record.registered;
           var p = record.lifecycle.waiting[normalizedId] = registered.deps &&
             registered.deps.length ?
-            this.top.depend(normalizedId, registered.deps) :
+            this.top.callDepend(normalizedId, registered.deps) :
             Promise.resolve();
 
           return p.then(resolve).catch(reject);
@@ -422,13 +426,17 @@ function Lifecycle(parent) {
             // Dependencies should not be normalized yet. Allow an async step
             // here to allow mechanisms, like AMD loader plugins, to async load
             // plugins before absolute resolving the IDs.
-            return this.depend(normalizedId, registered.deps);
+            return this.callDepend(normalizedId, registered.deps);
           }
         } catch (e) {
           moduleError(normalizedId, e);
         }
       }.bind(this))
       .then(function (deps) {
+        if (!deps.length) {
+          return;
+        }
+
         return new Promise.all(deps.map(function(depId) {
           return this.use(depId, normalizedId, factorySequence);
         }.bind(this)));
@@ -454,6 +462,23 @@ function Lifecycle(parent) {
 
         this.registry[normalizedId] = entry;
       }
+    },
+
+    /**
+     * Calls the depend function, then normalizes the dependency IDs before
+     * resolving.
+     * @param  {String} normalizedId
+     * @param  {Array} deps
+     * @return {Promise}
+     */
+    callDepend: function(normalizedId, deps) {
+      return this.depend(normalizedId, deps).then(function(deps) {
+        var normalizedDeps = deps.map(function(depId) {
+          return this.normalize(depId, normalizedId);
+        }.bind(this));
+
+        return (this.registry[normalizedId].deps = normalizedDeps);
+      }.bind(this));
     },
 
     /**
@@ -665,6 +690,11 @@ function normalizeAlias(nameParts, refParts, config) {
 
   function makeRequire(instance, refId) {
     function require(deps, callback, errback) {
+      if (typeof deps === 'string') {
+        var normalizedDepId = instance.top.normalize(deps, refId);
+        return instance.getModule(normalizedDepId, true);
+      }
+
       var p = Promise.all(deps.map(function(dep) {
         return instance.use(dep, refId);
       }));
@@ -735,7 +765,8 @@ function normalizeAlias(nameParts, refParts, config) {
       var usesExports = false,
           usesModule = false;
 
-      var ret = factory(normalizedDeps.map(function(dep) {
+//todo: use exports as the call context, to match node
+      var ret = factory.apply(undefined, normalizedDeps.map(function(dep) {
         if (dep === 'require') {
           return makeRequire(this, dep);
         } else if (dep === 'exports') {
@@ -771,7 +802,7 @@ function normalizeAlias(nameParts, refParts, config) {
 
         // Normalize define call to id, deps, factory.
         if (def.length === 1) {
-          def[0] = vary;
+          vary = def[0];
         } else if (def.length === 2) {
           if (def[0] === 'string') {
             // either id, vary or id, deps
@@ -820,20 +851,18 @@ function normalizeAlias(nameParts, refParts, config) {
           }
           this.addToRegistry(id, deps, fn);
         } else {
-          anon.push({
-            deps: deps,
-            factory: fn
-          });
+          anon.push([deps, fn]);
         }
       }.bind(this));
 
       if (anon.length) {
         for (var i = 0; i < anon.length; i++) {
+          var anonEntry = anon[i];
           if (i === anon.length - 1 && !foundId) {
-            this.addToRegistry(normalizedId, anon[0], anon[1]);
+            this.addToRegistry(normalizedId, anonEntry[0], anonEntry[1]);
           } else {
             console.error('Mismatched define. Ignoring, but a sign of a ' +
-                          'loading setup problem: ' + anon[i]);
+                          'loading setup problem: ' + anonEntry);
           }
         }
       }
@@ -863,6 +892,10 @@ function normalizeAlias(nameParts, refParts, config) {
     this.config = {
       baseUrl: './'
     };
+
+    // Seed entries for special dependencies so they are not requested by
+    // lifecycle.
+    this.modules.require = this.modules.exports = this.modules.module = {};
   }
 
   Loader.prototype = Lifecycle.prototype;
@@ -918,7 +951,8 @@ function normalizeAlias(nameParts, refParts, config) {
         if (err) {
           reject(err);
         } else {
-          resolve(text);
+          // Do not return the text as it has already been handled.
+          resolve('');
         }
       });
     });
