@@ -9,20 +9,20 @@ var assert = require('assert'),
     sourceDir = path.join(__dirname, 'source');
 
 describe('basic', function() {
-  // it('a-b-c', function(done) {
-  //   var l = createLoader({
-  //     baseUrl: path.join(sourceDir, 'a-b-c')
-  //   });
+  it('a-b-c', function(done) {
+    var l = createLoader({
+      baseUrl: path.join(sourceDir, 'a-b-c')
+    });
 
-  //   l(['a'], function(a) {
-  //     assert.equal(a.name, 'a');
-  //     assert.equal(a.b.name, 'b');
-  //     assert.equal(a.b.c.name, 'c');
-  //     done();
-  //   }).catch(function(err) {
-  //     done(err);
-  //   });
-  // });
+    l(['a'], function(a) {
+      assert.equal(a.name, 'a');
+      assert.equal(a.b.name, 'b');
+      assert.equal(a.b.c.name, 'c');
+      done();
+    }).catch(function(err) {
+      done(err);
+    });
+  });
 
   it('inline', function(done) {
     var l = createLoader({

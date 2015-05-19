@@ -688,6 +688,15 @@ function normalizeAlias(nameParts, refParts, config) {
       commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
       cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g;
 
+//todo: consider removing this duplication.
+  var hasOwn = Object.prototype.hasOwnProperty;
+  function hasProp(obj, prop) {
+      return hasOwn.call(obj, prop);
+  }
+  function getOwn(obj, prop) {
+      return hasProp(obj, prop) && obj[prop];
+  }
+
   function makeRequire(instance, refId) {
     function require(deps, callback, errback) {
       // If waiting inline definitions, claim them for this instance.
@@ -761,35 +770,48 @@ function normalizeAlias(nameParts, refParts, config) {
 
     depend: function(normalizedId, deps) {
       // async. deps are not normalized yet.
+
+      // If wanting exports or module (with its module.exports), seed the
+      // module value in case it is needed for cycles.
+      if (deps.indexOf('exports') !== -1 || deps.indexOf('module') !== -1) {
+        this.modules[normalizedId] = {};
+      }
 //todo: loader plugin support
       return Promise.resolve(deps);
     },
 
     instantiate: function(normalizedId, normalizedDeps, factory) {
       // sync
-      var usesExports = false,
-          usesModule = false;
+      var localExports, localModule;
 
-//todo: use exports as the call context, to match node
-      var ret = factory.apply(undefined, normalizedDeps.map(function(dep) {
+      //Use exports as the factory apply context, to match node.
+      var ret = factory.apply(this.modules[normalizedId],
+                              normalizedDeps.map(function(dep) {
         if (dep === 'require') {
           return makeRequire(this, dep);
         } else if (dep === 'exports') {
-          usesExports = true;
-//todo: likely need to detect this in depend() and set up a module value for
-//cycles.
+          return (localExports = this.modules[normalizedId]);
         } else if (dep === 'module') {
-          usesModule = true;
-//todo: likely need to detect this in depend() and set up a module value for
-//cycles.
+          return (localModule = {
+            id: normalizedId,
+            uri: this.locate(normalizedId),
+            exports: this.modules[normalizedId],
+            config: function () {
+              return getOwn(this.top.config.config, normalizedDeps) || {};
+            }.bind(this)
+          });
         } else {
           return this.getModule(dep);
         }
       }.bind(this)));
 
-      if (ret === undefined && (usesExports || usesModule)) {
-        return this.modules[normalizedId];
-      } else {
+      if (ret === undefined) {
+        if (localExports) {
+          return this.modules[normalizedId];
+        } else if (localModule) {
+          return localModule.exports;
+        }
+      } else if (ret) {
         return ret;
       }
     },
@@ -799,7 +821,7 @@ function normalizeAlias(nameParts, refParts, config) {
       var queue = defineQueue,
           anon = [],
           foundId = !normalizedId;
-debugger;
+
       defineQueue = [];
 
       queue.forEach(function(def) {
@@ -895,7 +917,8 @@ debugger;
     Lifecycle.call(this);
     this.instanceId = id || 'id' + (loaderInstanceCounter++);
     this.config = {
-      baseUrl: './'
+      baseUrl: './',
+      config: {}
     };
 
     // Seed entries for special dependencies so they are not requested by
