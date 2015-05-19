@@ -1,6 +1,8 @@
+* With no exports object defined get: Error: baz failed: TypeError: Cannot set property 'name' of undefined, but the trace is not usable. Perhaps instead of eval while in node, use vm, does that give good context?
+
 * test addToRegistry
 
-* For addToRegistry local module definitions, are they all added to registry before one is traced that may want it? Also, that a local definition wins over outer one.
+* For addToRegistry: does local definition win over outer one?
 
 * locate: pass in file extension? How would that work?
 

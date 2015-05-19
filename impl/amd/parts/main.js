@@ -15,6 +15,11 @@ var amodro, define;
 
   function makeRequire(instance, refId) {
     function require(deps, callback, errback) {
+      // If waiting inline definitions, claim them for this instance.
+      if (defineQueue.length) {
+        instance.execCompleted();
+      }
+
       if (typeof deps === 'string') {
         var normalizedDepId = instance.top.normalize(deps, refId);
         return instance.getModule(normalizedDepId, true);
@@ -118,7 +123,7 @@ var amodro, define;
     execCompleted: function(normalizedId) {
       var queue = defineQueue,
           anon = [],
-          foundId = false;
+          foundId = !normalizedId;
 
       defineQueue = [];
 
@@ -129,13 +134,13 @@ var amodro, define;
         if (def.length === 1) {
           vary = def[0];
         } else if (def.length === 2) {
-          if (def[0] === 'string') {
+          if (typeof def[0] === 'string') {
             // either id, vary or id, deps
             id = def[0];
-            if (typeof def[1] === 'function') {
-              vary = def[1];
-            } else {
+            if (Array.isArray(def[1])) {
               deps = def[1];
+            } else {
+              vary = def[1];
             }
           } else {
             // Other two arg combo is deps, fn, an anon call.
@@ -171,7 +176,7 @@ var amodro, define;
         }
 
         if (id) {
-          if (id === normalizedId) {
+          if (normalizedId && id === normalizedId) {
             foundId = true;
           }
           this.addToRegistry(id, deps, fn);
@@ -211,7 +216,7 @@ var amodro, define;
 
   var loaderInstanceCounter = 0;
 
-  function Loader(id) {
+  function LoaderLifecyle(id) {
     Lifecycle.call(this);
     this.instanceId = id || 'id' + (loaderInstanceCounter++);
     this.config = {
@@ -223,7 +228,7 @@ var amodro, define;
     this.modules.require = this.modules.exports = this.modules.module = {};
   }
 
-  Loader.prototype = Lifecycle.prototype;
+  LoaderLifecyle.prototype = Lifecycle.prototype;
 
   // Set up define() infrastructure. It just holds on to define calls until a
   // loader instance claims them via execCompleted.
@@ -234,15 +239,24 @@ var amodro, define;
     };
   }
 
+  function createLoader(config, id) {
+    var lifecyle = new LoaderLifecyle(id);
+    var loader = makeRequire(lifecyle);
+    loader.config = function(cfg) {
+      lifecyle.configure(cfg);
+    };
+
+    if (config) {
+      loader.config(config);
+    }
+
+    return loader;
+  }
+
   // Set up default loader under amodro name.
   if (typeof amodro === 'undefined') {
-    var loaderInstance = new Loader();
-    amodro = makeRequire(loaderInstance);
-    amodro.Loader = Loader;
-
-    amodro.config = function(cfg) {
-      loaderInstance.configure(cfg);
-    };
+    amodro = createLoader();
+    amodro.createLoader = createLoader;
 
     // Finds require(StringLiteral) calls in a function.
     amodro.parseCjsFunction = function(fn) {

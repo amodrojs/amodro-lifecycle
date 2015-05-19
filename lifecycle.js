@@ -146,7 +146,7 @@ function Lifecycle(parent) {
         var record = this.getRegistered(normalizedId);
         if (record) {
           var registered = record.registered;
-          var p = record.lifecycle.waiting[normalizedId] = registered.deps &&
+          var p = record.instance.waiting[normalizedId] = registered.deps &&
             registered.deps.length ?
             this.top.callDepend(normalizedId, registered.deps) :
             Promise.resolve();
