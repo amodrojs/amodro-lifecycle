@@ -10,8 +10,10 @@
 * put in locations support from module as an override.
 * bundles config, goes in locate
 
+* inline-414 does not trigger the cycle detection message? Test passes, but
 
+-> even if in modules, does not mean done, need to check if registry value? also
+implies cleanup up registry values when done?
+* clean up waiting also? Maybe that is the signal instead of registry? no should clean both.
 
 Test:
-
-* throw an error in an overriden method, like translate.

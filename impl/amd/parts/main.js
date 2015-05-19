@@ -31,7 +31,7 @@ var amodro, define;
 
       if (typeof deps === 'string') {
         var normalizedDepId = instance.top.normalize(deps, refId);
-        return instance.getModule(normalizedDepId, true);
+        return instance.getDep(refId, normalizedDepId, true);
       }
 
       var p = Promise.all(deps.map(function(dep) {
@@ -116,22 +116,15 @@ var amodro, define;
       //Use exports as the factory apply context, to match node.
       var ret = factory.apply(this.modules[normalizedId],
                               normalizedDeps.map(function(dep) {
-        if (dep === 'require') {
-          return makeRequire(this, dep);
-        } else if (dep === 'exports') {
-          return (localExports = this.modules[normalizedId]);
+        var mod = this.getDep(normalizedId, dep);
+
+        if (dep === 'exports') {
+          localExports = dep;
         } else if (dep === 'module') {
-          return (localModule = {
-            id: normalizedId,
-            uri: this.locate(normalizedId),
-            exports: this.modules[normalizedId],
-            config: function () {
-              return getOwn(this.top.config.config, normalizedDeps) || {};
-            }.bind(this)
-          });
-        } else {
-          return this.getModule(dep);
+          localModule = dep;
         }
+
+        return mod;
       }.bind(this)));
 
       if (ret === undefined) {
@@ -145,6 +138,26 @@ var amodro, define;
       }
     },
     // END overrides
+
+    getDep: function(normalizedId, dep, throwOnMiss) {
+      var reg = this.registry[normalizedId];
+      if (dep === 'require') {
+        return reg.require || (reg.require = makeRequire(this, normalizedId));
+      } else if (dep === 'exports') {
+        return this.modules[normalizedId];
+      } else if (dep === 'module') {
+        return reg.module || (reg.module = {
+          id: normalizedId,
+          uri: this.locate(normalizedId),
+          exports: this.modules[normalizedId],
+          config: function () {
+            return getOwn(this.top.config.config, normalizedId) || {};
+          }.bind(this)
+        });
+      } else {
+        return this.getModule(dep, throwOnMiss);
+      }
+    },
 
     execCompleted: function(normalizedId) {
       var queue = defineQueue,
@@ -231,6 +244,13 @@ var amodro, define;
           baseUrl += '/';
         }
         this.config.baseUrl = baseUrl;
+      }
+
+      if (cfg.config) {
+//todo: merge this better.
+        Object.keys(cfg.config).forEach(function(key) {
+          this.config.config[key] = cfg.config[key];
+        }.bind(this));
       }
 //todo: finish this.
     }
