@@ -1,5 +1,6 @@
+/*global Lifecycle, dotNormalize, normalizeAlias, addPluginSupport,
+         define: true */
 /*jshint strict: false */
-/*global Lifecycle, dotNormalize, normalizeAlias, define: true */
 var amodro, define;
 (function() {
   //INSERT ../../../support/prim.js
@@ -7,6 +8,7 @@ var amodro, define;
   //INSERT ../../../lifecycle.js
   //INSERT ../../../support/normalize-alias.js
   //INSERT ../../../support/normalize-dot.js
+  //INSERT ../../../support/plugins.js
 
 
   var slice = Array.prototype.slice,
@@ -71,42 +73,28 @@ var amodro, define;
 
     normalize: function(id, refId) {
       // sync
-      var pluginDesc = this.getPluginDesc(id, refId);
-      if (pluginDesc) {
-        var plugin = pluginDesc.plugin;
-        if (plugin.normalize) {
-          return plugin.normalize(this.getPluginProxy,
-                                  pluginDesc.resourceId,
-                                  refId);
-        } else {
-          return pluginDesc.id + '!' +
-                 this.normalize(pluginDesc.resourceId, refId);
-        }
+      var idParts = dotNormalize(id, refId, true);
+      if (this.config.alias) {
+        return normalizeAlias(idParts, (refId ? refId.split('/') : []),
+                              this.config);
       } else {
-        var idParts = dotNormalize(id, refId, true);
-        if (this.config.alias) {
-          return normalizeAlias(idParts, (refId ? refId.split('/') : []),
-                                this.config);
-        } else {
-          return idParts.join('/');
-        }
+        return idParts.join('/');
       }
     },
 
-    locate: function(id) {
+    locate: function(normalizedId) {
       // sync
 //todo: locations config, bundles config?
-      return this.config.baseUrl + id + '.js';
+      return this.config.baseUrl + normalizedId + '.js';
     },
 
-    fetch: function(id, location) {
+    fetch: function(normalizedId, location) {
       // async
-      return amodro.fetch(id, location, this);
+      return amodro.fetch(normalizedId, location, this);
     },
 
     translate: function(normalizedId, location, source) {
       // sync
-//todo: may need loader plugin calls in there.
       return source;
     },
 
@@ -165,32 +153,6 @@ var amodro, define;
       }
     },
     // END overrides
-
-    getPluginDesc: function(id, refId) {
-      var index = id.indexOf('!');
-      if (index > -1) {
-        var plugId = this.normalize(id.substring(0, index), refId);
-        return {
-          id: plugId,
-          resourceId: id.substring(index + 1),
-          plugin: this.getModule(plugId, true)
-        };
-      }
-    },
-
-    getPluginProxy: function() {
-      return this.pluginProxy || (this.pluginProxy = {
-        // This ornate approach is to allow late-loaded modifiers to the basic
-        // hooks, like normalize/locate, to still be used atter this objet's
-        // creation.
-        normalize: function(normalizedId, refId) {
-          return this.normalize(normalizedId, refId);
-        }.bind(this),
-        locate: function(normalizedId) {
-          return this.locate(normalizedId);
-        }.bind(this)
-      });
-    },
 
     getDep: function(normalizedId, dep, throwOnMiss) {
       var reg = this.registry[normalizedId];
@@ -312,6 +274,11 @@ var amodro, define;
   Object.keys(protoMethods).forEach(function(key) {
     Lifecycle.prototype[key] = protoMethods[key];
   });
+
+  // Mix in plugin support. Do this AFTER setting up baseline lifecycle methods,
+  // since the plugin support will delegate to those captured methods after
+  // detecting if plugins should be used.
+  addPluginSupport(Lifecycle);
 
   var loaderInstanceCounter = 0;
 

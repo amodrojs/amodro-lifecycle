@@ -18,4 +18,7 @@ implies cleanup up registry values when done?
 
 * test loading a plugin that had a depending on the module wanting to use it in a dependency.
 
+plugins:
 * useExt, detectExt support in loader plugins
+* how to support config? like isBuild? Is it needed?
+* how to communicate full plugin ID (including plug! part) to plugin methods? Ideally plugins would not need module.id if wanting to call lifecycle.use? See plugin-simple/index.js

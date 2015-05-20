@@ -1,6 +1,6 @@
 {
   "strict": false,
-  "globalstrict": false
+  "globalstrict": false,
 
   "camelcase": false,
   "curly": true,
@@ -33,6 +33,4 @@
   "node": true,
 
   "predef": ["define"]
-}
-
 }

@@ -73,6 +73,12 @@ function Lifecycle(parent) {
       }
     },
 
+    setModule: function(normalizedId, value) {
+      if(!hasProp(this.modules, normalizedId)) {
+        this.modules[normalizedId] = value;
+      }
+    },
+
     /**
      * Triggers loading and resolution of modules. Outside callers of this
      * function should only pass id and refId. factorySequence is used
@@ -178,12 +184,16 @@ function Lifecycle(parent) {
       return (this.waiting[normalizedId] = this.fetch(normalizedId, location)
       .then(function(source) {
         try {
-          source = this.translate(normalizedId, location, source);
+          // Protect against fetch promise results being something like a
+          // module value, in the case of plugins.
+          if (typeof source === 'string' && source) {
+            source = this.translate(normalizedId, location, source);
+          }
 
           // Some cases, like script tag-based loading, do not have source to
           // evaluate, hidden by browser security restrictions from seeing the
           // source.
-          if (source) {
+          if (typeof source === 'string' && source) {
             this.evaluate(normalizedId, location, source);
           }
 
@@ -290,14 +300,15 @@ function Lifecycle(parent) {
       var order = factorySequence.depOrder;
       for (var i = 0; i < order.length; i++) {
         var depId = order[i],
-            registered = this.getRegistered(depId).registered;
+            registeredEntry = this.getRegistered(depId);
 
         //registered may not exist, dependency could have already been handled
         //by a different factorySequence, and that is OK.
-        if (!registered) {
+        if (!registeredEntry) {
           continue;
         }
 
+        var registered = registeredEntry.registered;
         try {
           this.modules[depId] = this.instantiate(depId,
                                                  registered.deps,
