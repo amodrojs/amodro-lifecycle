@@ -71,12 +71,25 @@ var amodro, define;
 
     normalize: function(id, refId) {
       // sync
-      var idParts = dotNormalize(id, refId, true);
-      if (this.config.alias) {
-        return normalizeAlias(idParts, (refId ? refId.split('/') : []),
-                              this.config);
+      var pluginDesc = this.getPluginDesc(id, refId);
+      if (pluginDesc) {
+        var plugin = pluginDesc.plugin;
+        if (plugin.normalize) {
+          return plugin.normalize(this.getPluginProxy,
+                                  pluginDesc.resourceId,
+                                  refId);
+        } else {
+          return pluginDesc.id + '!' +
+                 this.normalize(pluginDesc.resourceId, refId);
+        }
       } else {
-        return idParts.join('/');
+        var idParts = dotNormalize(id, refId, true);
+        if (this.config.alias) {
+          return normalizeAlias(idParts, (refId ? refId.split('/') : []),
+                                this.config);
+        } else {
+          return idParts.join('/');
+        }
       }
     },
 
@@ -100,13 +113,27 @@ var amodro, define;
     depend: function(normalizedId, deps) {
       // async. deps are not normalized yet.
 
-      // If wanting exports or module (with its module.exports), seed the
-      // module value in case it is needed for cycles.
-      if (deps.indexOf('exports') !== -1 || deps.indexOf('module') !== -1) {
-        this.modules[normalizedId] = {};
+      //Look for loader plugins, and be sure to load them.
+      var plugins = [];
+      deps.forEach(function(dep) {
+        var parts = dep.split('!');
+        if (parts.length > 1) {
+          plugins.push(this.normalize(parts[0], normalizedId));
+        } else if ((dep === 'exports' || dep === 'module') &&
+                   !hasProp(this.modules[normalizedId])) {
+          // If wanting exports or module (with its module.exports), seed the
+          // module value in case it is needed for cycles.
+          this.modules[normalizedId] = {};
+        }
+      }.bind(this));
+
+      if (plugins.length) {
+        return this.useNormalizedDeps(normalizedId, plugins).then(function() {
+          return deps;
+        });
+      } else {
+        return Promise.resolve(deps);
       }
-//todo: loader plugin support
-      return Promise.resolve(deps);
     },
 
     instantiate: function(normalizedId, normalizedDeps, factory) {
@@ -138,6 +165,32 @@ var amodro, define;
       }
     },
     // END overrides
+
+    getPluginDesc: function(id, refId) {
+      var index = id.indexOf('!');
+      if (index > -1) {
+        var plugId = this.normalize(id.substring(0, index), refId);
+        return {
+          id: plugId,
+          resourceId: id.substring(index + 1),
+          plugin: this.getModule(plugId, true)
+        };
+      }
+    },
+
+    getPluginProxy: function() {
+      return this.pluginProxy || (this.pluginProxy = {
+        // This ornate approach is to allow late-loaded modifiers to the basic
+        // hooks, like normalize/locate, to still be used atter this objet's
+        // creation.
+        normalize: function(normalizedId, refId) {
+          return this.normalize(normalizedId, refId);
+        }.bind(this),
+        locate: function(normalizedId) {
+          return this.locate(normalizedId);
+        }.bind(this)
+      });
+    },
 
     getDep: function(normalizedId, dep, throwOnMiss) {
       var reg = this.registry[normalizedId];

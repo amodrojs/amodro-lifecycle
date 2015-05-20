@@ -16,4 +16,6 @@
 implies cleanup up registry values when done?
 * clean up waiting also? Maybe that is the signal instead of registry? no should clean both.
 
-Test:
+* test loading a plugin that had a depending on the module wanting to use it in a dependency.
+
+* useExt, detectExt support in loader plugins
