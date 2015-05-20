@@ -120,7 +120,7 @@ var amodro, define;
         if (parts.length > 1) {
           plugins.push(this.normalize(parts[0], normalizedId));
         } else if ((dep === 'exports' || dep === 'module') &&
-                   !hasProp(this.modules[normalizedId])) {
+                   !hasProp(this.modules, normalizedId)) {
           // If wanting exports or module (with its module.exports), seed the
           // module value in case it is needed for cycles.
           this.modules[normalizedId] = {};
