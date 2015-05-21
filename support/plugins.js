@@ -1,3 +1,4 @@
+/*global hasProp*/
 function addPluginSupport(Lifecycle) {
   'use strict';
 
@@ -8,7 +9,14 @@ function addPluginSupport(Lifecycle) {
                  'depend', 'instantiate'],
       customOverrides = {
         normalize: true,
+        locate: true,
         depend: true
+      },
+      // For fetches, want the default method impl to get the ID without the
+      // plugin name on it. For other hooks, that deal with data stored by
+      // full ID, pass the full ID.
+      useResourceId = {
+        fetch: true
       };
 
   function interceptMethod(methodName) {
@@ -18,10 +26,12 @@ function addPluginSupport(Lifecycle) {
       var pluginDesc = this.getPluginDesc(normalizedId);
       if (pluginDesc) {
         var plugin = pluginDesc.plugin;
-        args[0] = pluginDesc.resourceId;
         if (plugin[methodName]) {
+          args[0] = pluginDesc.resourceId;
           args.unshift(this.getPluginProxy());
           return plugin[methodName].apply(this, args);
+        } else if (useResourceId[methodName]) {
+          args[0] = pluginDesc.resourceId;
         }
       }
 
@@ -78,6 +88,30 @@ function addPluginSupport(Lifecycle) {
     } else {
       return oldMethods.depend.call(this, normalizedId, deps);
     }
+  };
+
+  proto.locate = function(normalizedId, suggestedExtension) {
+    var pluginDesc = this.getPluginDesc(normalizedId);
+    if (pluginDesc) {
+      var plugin = pluginDesc.plugin,
+          resourceId = pluginDesc.resourceId;
+      if (plugin.locate) {
+        return plugin.locate(this.getPluginProxy(),
+                             normalizedId, suggestedExtension);
+      } else if (hasProp(plugin, 'locateExtension')) {
+        return oldMethods.locate.call(this,
+                                      resourceId,
+                                      plugin.locateExtension);
+      } else if (plugin.detectExtension) {
+        var index = resourceId.lastIndexOf('.');
+        if (index !== -1) {
+          return oldMethods.locate.call(this,
+                                        resourceId.substring(0, index),
+                                        resourceId.substring(index + 1));
+        }
+      }
+    }
+    return oldMethods.locate.call(this, normalizedId, suggestedExtension);
   };
 
   function makeProxyMethod(proxy, methodName, instance) {

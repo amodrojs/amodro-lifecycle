@@ -285,25 +285,6 @@ function Lifecycle(parent) {
     },
 
     /**
-     * Evaluates the source a of module. May not apply in some module
-     * situations, like AMD modules loaded via script tags. Can be overridden if
-     * execution should happen differently. For instance, in node, perhaps using
-     * the vm module to execute the script. Or for loader plugins, making sure
-     * the evaluated result gets converted to registry entries.
-     *
-     * The result of the execution should place result in a this.registry entry,
-     * if the module has dependencies and wants to export a specific module
-     * value.
-     *
-     * @param  {String} normalizedId
-     * @param  {String} location
-     * @param  {String} source
-     */
-    evaluate: function(normalizedId, location, source) {
-      evaluate(this, normalizedId, location, source);
-    },
-
-    /**
      * Used in internally. Should not be called directly. When a dependency
      * loads, checks to see if a whole dependency chain is loaded, and if so,
      * calls the factory functions based on the depOrder specified in the
@@ -356,12 +337,13 @@ function Lifecycle(parent) {
       return id;
     },
 
-    locate: function(id, suggestedExtension) {
+    locate: function(normalizedId, suggestedExtension) {
       // sync
-      return id + (suggestedExtension ? '.' + suggestedExtension : '');
+      return normalizedId +
+             (suggestedExtension ? '.' + suggestedExtension : '');
     },
 
-    fetch: function(id, location) {
+    fetch: function(normalizedId, location) {
       // async
       return Promise.resolve('');
     },
@@ -369,6 +351,25 @@ function Lifecycle(parent) {
     translate: function(normalizedId, location, source) {
       // sync
       return source;
+    },
+
+    /**
+     * Evaluates the source a of module. May not apply in some module
+     * situations, like AMD modules loaded via script tags. Can be overridden if
+     * execution should happen differently. For instance, in node, perhaps using
+     * the vm module to execute the script. Or for loader plugins, making sure
+     * the evaluated result gets converted to registry entries.
+     *
+     * The result of the execution should place result in a this.registry entry,
+     * if the module has dependencies and wants to export a specific module
+     * value.
+     *
+     * @param  {String} normalizedId
+     * @param  {String} location
+     * @param  {String} source
+     */
+    evaluate: function(normalizedId, location, source) {
+      evaluate(this, normalizedId, location, source);
     },
 
     depend: function(normalizedId, deps) {
