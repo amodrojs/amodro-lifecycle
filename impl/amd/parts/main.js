@@ -43,7 +43,7 @@ var amodro, define;
       if (callback) {
         p = p.then(function(ary) {
           return callback.apply(undefined, ary);
-        });
+        }.bind(this));
       }
       if (errback) {
         p = p.catch(errback);
@@ -101,13 +101,8 @@ var amodro, define;
     depend: function(normalizedId, deps) {
       // async. deps are not normalized yet.
 
-      //Look for loader plugins, and be sure to load them.
-      var plugins = [];
       deps.forEach(function(dep) {
-        var parts = dep.split('!');
-        if (parts.length > 1) {
-          plugins.push(this.normalize(parts[0], normalizedId));
-        } else if ((dep === 'exports' || dep === 'module') &&
+        if ((dep === 'exports' || dep === 'module') &&
                    !hasProp(this.modules, normalizedId)) {
           // If wanting exports or module (with its module.exports), seed the
           // module value in case it is needed for cycles.
@@ -115,13 +110,7 @@ var amodro, define;
         }
       }.bind(this));
 
-      if (plugins.length) {
-        return this.useNormalizedDeps(normalizedId, plugins).then(function() {
-          return deps;
-        });
-      } else {
-        return Promise.resolve(deps);
-      }
+      return Promise.resolve(deps);
     },
 
     instantiate: function(normalizedId, normalizedDeps, factory) {

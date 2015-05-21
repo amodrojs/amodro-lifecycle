@@ -37,6 +37,13 @@ function Lifecycle(parent) {
     throw newError;
   }
 
+  function ensurePromise(value) {
+    if (!value || !value.then) {
+      return Promise.resolve(value);
+    }
+    return value;
+  }
+
   Lifecycle.prototype = {
     getWaiting: function(normalizedId) {
       var waiting = getOwn(this.waiting, normalizedId);
@@ -92,8 +99,14 @@ function Lifecycle(parent) {
      * @return {Promise}                 Promise, resolves to module ID value.
      */
     use: function(id, refId, factorySequence) {
-      return new Promise(function(resolve, reject) {
-        var normalizedId;
+      var normalizedId;
+
+      // Top level use calls may be loader plugin resources, so ask for depend
+      // hooks to determine if there are any other dependencies for the id
+      // before proceeding.
+      //
+      return ensurePromise(this.top.depend(refId, [id]))
+      .then(function() {
         try {
           normalizedId = this.top.normalize(id, refId);
         } catch (e) {
@@ -103,7 +116,7 @@ function Lifecycle(parent) {
         // If already defined, just resturn the module.
         var moduleValue = this.getModule(normalizedId);
         if (moduleValue) {
-          return resolve(moduleValue);
+          return moduleValue;
         }
 
         if (!factorySequence) {
@@ -130,13 +143,7 @@ function Lifecycle(parent) {
           factorySequence.depIds[normalizedId] = true;
         }
 
-        var oldRes = resolve;
-
-        resolve = function(value) {
-          this.factorySequenceDepComplete(factorySequence);
-          oldRes(this.getModule(normalizedId));
-        }.bind(this);
-
+        // If already waiting on the module, then just wait for it.
         var waiting;
         try {
           waiting = this.getWaiting(normalizedId);
@@ -145,7 +152,7 @@ function Lifecycle(parent) {
         }
 
         if (waiting) {
-          return waiting.then(resolve).catch(reject);
+          return waiting;
         }
 
         // No waiting record, but could have a registered entry from a bulk
@@ -161,15 +168,20 @@ function Lifecycle(parent) {
 
           return p.then(function(deps) {
             return this.useNormalizedDeps(normalizedId, deps, factorySequence);
-          }.bind(this))
-          .then(resolve)
-          .catch(reject);
+          }.bind(this));
         }
 
+        // Not already waiting or in registry, needs to be fetched/loaded.
         var location = this.top.locate(normalizedId);
-
-        this.top.load(normalizedId, location, factorySequence)
-        .then(resolve).catch(reject);
+        return this.top.load(normalizedId, location, factorySequence);
+      }.bind(this))
+      .then(function() {
+        // If the ID was part of a factory sequence, indicate complete. It may
+        // not be if the module was already in modules.
+        if (factorySequence) {
+          this.factorySequenceDepComplete(factorySequence);
+        }
+        return this.getModule(normalizedId);
       }.bind(this));
     },
 
@@ -181,7 +193,8 @@ function Lifecycle(parent) {
      * @return {Promise}
      */
     load: function(normalizedId, location, factorySequence) {
-      return (this.waiting[normalizedId] = this.fetch(normalizedId, location)
+      return (this.waiting[normalizedId] =
+      ensurePromise(this.fetch(normalizedId, location))
       .then(function(source) {
         try {
           // Protect against fetch promise results being something like a
@@ -221,7 +234,7 @@ function Lifecycle(parent) {
         return;
       }
 
-      return new Promise.all(deps.map(function(depId) {
+      return Promise.all(deps.map(function(depId) {
         return this.use(depId, normalizedId, factorySequence);
       }.bind(this)));
     },
@@ -255,12 +268,19 @@ function Lifecycle(parent) {
      * @return {Promise}
      */
     callDepend: function(normalizedId, deps) {
-      return this.depend(normalizedId, deps).then(function(deps) {
+      return ensurePromise(this.depend(normalizedId, deps))
+      .then(function(deps) {
         var normalizedDeps = deps.map(function(depId) {
           return this.normalize(depId, normalizedId);
         }.bind(this));
 
-        return (this.registry[normalizedId].deps = normalizedDeps);
+        // The normalized reference ID could be undefined if a top level .use
+        // call outside of a module.
+        if (normalizedId) {
+          this.registry[normalizedId].deps = normalizedDeps;
+        }
+
+        return normalizedDeps;
       }.bind(this));
     },
 

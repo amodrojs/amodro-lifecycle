@@ -7,7 +7,6 @@ function addPluginSupport(Lifecycle) {
       methods = ['normalize', 'locate', 'fetch',
                  'translate', 'depend', 'instantiate'];
 
-debugger;
   function interceptMethod(methodName) {
     return function(normalizedId) {
       var args = slice.call(arguments);
@@ -29,7 +28,7 @@ debugger;
   methods.forEach(function(methodName) {
     oldMethods[methodName] = proto[methodName];
     // normalize is special since it normalizes IDs used by the other methods.
-    if (methodName !== 'normalize') {
+    if (methodName !== 'normalize' && methodName !== 'depend') {
       proto[methodName] = interceptMethod(methodName);
     }
   });
@@ -50,6 +49,30 @@ debugger;
       }
     } else {
       return oldMethods.normalize.call(this, id, refId);
+    }
+  };
+
+  proto.depend = function(normalizedId, deps) {
+    var plugins = [];
+    deps.forEach(function(id) {
+      var index = id.indexOf('!');
+      if (index !== -1) {
+        var normalizedDep = this
+                            .normalize(id.substring(0, index), normalizedId);
+        if (plugins.indexOf(normalizedDep) === -1) {
+          plugins.push(normalizedDep);
+        }
+      }
+    }.bind(this));
+
+    if (plugins.length) {
+      return Promise.all(plugins.map(function(pluginId) {
+        return this.use(pluginId, normalizedId);
+      }.bind(this))).then(function() {
+        return oldMethods.depend.call(this, normalizedId, deps);
+      }.bind(this));
+    } else {
+      return oldMethods.depend.call(this, normalizedId, deps);
     }
   };
 
