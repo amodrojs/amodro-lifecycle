@@ -1,9 +1,5 @@
 * With no exports object defined get: Error: baz failed: TypeError: Cannot set property 'name' of undefined, but the trace is not usable. Perhaps instead of eval while in node, use vm, does that give good context?
 
-* For addToRegistry: does local definition win over outer one?
-
-* locate: pass in file extension? How would that work?
-
 * try out parent/child relationship, make sure top is used for lifecycle hooks.
 
 * packages config support: just put in a register for the package name pointing to main module, then a paths config?
@@ -11,20 +7,24 @@
 * bundles config, goes in locate
 
 * inline-414 does not trigger the cycle detection message? Test passes, but
-
 -> even if in modules, does not mean done, need to check if registry value? also
 implies cleanup up registry values when done?
 * clean up waiting also? Maybe that is the signal instead of registry? no should clean both.
 
+
+## config:
+
+* test alias config (also allow for map legacy name?
+
+
+## plugins:
+
 * test loading a plugin that had a depending on the module wanting to use it in a dependency.
-
-plugins:
-* useExt, detectExt support in loader plugins
 * how to support config? like isBuild? Is it needed?
-* how to communicate full plugin ID (including plug! part) to plugin methods? Ideally plugins would not need module.id if wanting to call lifecycle.use? See plugin-simple/index.js
 
+## parent/child loaders
 
-
+* For addToRegistry: does local definition win over outer one?
 
 ## Difference with requirejs:
 

@@ -20,12 +20,21 @@ module.exports = function(testPath, fn) {
 
   //describe(testSuffix, function() {
     it(testSuffix, function(done) {
-      fn(createLoader({
-        baseUrl: path.join(sourceDir, path.dirname(testSuffix))
-      }), define, assert, done)
-      .catch(function(err) {
-        done(err);
-      });
+      var result;
+
+      try {
+        result = fn(createLoader({
+          baseUrl: path.join(sourceDir, path.dirname(testSuffix))
+        }), define, assert, done);
+      } catch (e) {
+        return done(e);
+      }
+
+      if (result && result.then) {
+        result.catch(function(err) {
+          done(err);
+        });
+      }
     });
   //});
 };

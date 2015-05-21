@@ -24,6 +24,24 @@ var amodro, define;
       return hasProp(obj, prop) && obj[prop];
   }
 
+  function deepMix(dest, source) {
+    Object.keys(source).forEach(function(prop) {
+      var value = source[prop];
+      if (typeof value === 'object' && value &&
+        !Array.isArray(value) && (typeof value !== 'function') &&
+        !(value instanceof RegExp)) {
+
+        if (!dest[prop]) {
+          dest[prop] = {};
+        }
+        deepMix(dest[prop], value);
+      } else {
+        dest[prop] = value;
+      }
+    });
+    return dest;
+  }
+
   function makeRequire(instance, refId) {
     function require(deps, callback, errback) {
       // If waiting inline definitions, claim them for this instance.
@@ -84,9 +102,53 @@ var amodro, define;
 
     locate: function(normalizedId, suggestedExtension) {
       // sync
-//todo: locations config, bundles config?
-      return this.config.baseUrl + normalizedId +
-             (suggestedExtension ? '.' + suggestedExtension : '');
+
+      var location,
+          normalizedLocations = this.config._normalizedLocations,
+          segment = normalizedId,
+          firstPass = true;
+
+//todo: add bundles config?
+
+      while (segment) {
+        // If not the first pass match, then look for id + '/' matches,
+        // for location config that only matches children of a higher
+        // level ID. So locations config for 'a/b/' should only match 'a/b/c'
+        // and not 'a/b'.
+        if (!firstPass) {
+          var segmentPlusSlash = segment + '/';
+          if (hasProp(normalizedLocations, segmentPlusSlash)) {
+            location = normalizedLocations[segmentPlusSlash];
+            location = normalizedId.replace(segmentPlusSlash, location + '/');
+            break;
+          }
+        }
+        if (hasProp(normalizedLocations, segment)) {
+          location = normalizedId.replace(segment,
+                                          normalizedLocations[segment]);
+          break;
+        }
+        var slashIndex = segment.lastIndexOf('/');
+        if (slashIndex === -1) {
+          break;
+        }
+        firstPass = false;
+        segment = segment.substring(0, slashIndex);
+      }
+
+      if (!location) {
+        location = normalizedId;
+      }
+
+      location = (location.charAt(0) === '/' ||
+                  location.match(/^[\w\+\.\-]+:/) ?
+                  '' : this.config.baseUrl) + location;
+
+      if (suggestedExtension && location.indexOf('data:') !== 0) {
+        location += '.' + suggestedExtension;
+      }
+
+      return location;
     },
 
     fetch: function(normalizedId, location) {
@@ -254,21 +316,55 @@ var amodro, define;
     },
 
     configure: function(cfg) {
-      if (cfg.baseUrl) {
-        var baseUrl = cfg.baseUrl;
-        if (baseUrl.charAt(baseUrl.length - 1) !== '/') {
-          baseUrl += '/';
-        }
-        this.config.baseUrl = baseUrl;
-      }
+      var config = this.config;
 
-      if (cfg.config) {
-//todo: merge this better.
-        Object.keys(cfg.config).forEach(function(key) {
-          this.config.config[key] = cfg.config[key];
-        }.bind(this));
-      }
-//todo: finish this.
+      Object.keys(cfg).forEach(function(key) {
+        var value = cfg[key];
+
+        if (key === 'locations') {
+          // Look for a package
+          var normalizedLocations = config._normalizedLocations;
+
+          Object.keys(value).forEach(function(locKey) {
+            var mainId,
+                locValue = value[locKey];
+
+            // locValues cannot end in a /, sanitize.
+            if (locValue && typeof locValue === 'string' &&
+                locValue.lastIndexOf('/') === locValue.length - 1) {
+              locValue = locValue.substring(0, locValue.length - 1);
+            }
+
+            // Update public-matching config inside loader, then break it
+            // apart for more efficient internal use.
+            config.locations[locKey] = locValue;
+
+            // Separate the main sub-ID for a package, if specified
+            var keyParts = locKey.split('{');
+            if (keyParts.length === 2) {
+              locKey = keyParts[0];
+              mainId = locKey + '/' +
+                       keyParts[1].substring(0, keyParts[1].length - 1);
+            }
+
+            normalizedLocations[locKey] = locValue;
+            if (mainId) {
+              this.registry[locKey] = {
+                deps: [mainId],
+                factory: function(m) { return m; }
+              };
+            }
+          });
+        } else if (key === 'baseUrl') {
+          var baseUrl = cfg.baseUrl;
+          if (baseUrl.charAt(baseUrl.length - 1) !== '/') {
+            baseUrl += '/';
+          }
+          config.baseUrl = baseUrl;
+        } else {
+          deepMix(this.config[key], cfg[key]);
+        }
+      }.bind(this));
     }
   };
 
@@ -288,7 +384,9 @@ var amodro, define;
     this.instanceId = id || 'id' + (loaderInstanceCounter++);
     this.config = {
       baseUrl: './',
-      config: {}
+      config: {},
+      _normalizedLocations: {},
+      locations: {}
     };
 
     // Seed entries for special dependencies so they are not requested by

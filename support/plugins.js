@@ -102,7 +102,7 @@ function addPluginSupport(Lifecycle) {
         return oldMethods.locate.call(this,
                                       resourceId,
                                       plugin.locateExtension);
-      } else if (plugin.detectExtension) {
+      } else if (plugin.locateDetectExtension) {
         var index = resourceId.lastIndexOf('.');
         if (index !== -1) {
           return oldMethods.locate.call(this,
@@ -130,6 +130,7 @@ function addPluginSupport(Lifecycle) {
     // Add some proxied methods for some loader pieces
     makeProxyMethod(proxy, 'use', instance);
     makeProxyMethod(proxy, 'setModule', instance);
+    makeProxyMethod(proxy, 'evaluate', instance);
 
     return proxy;
   }
