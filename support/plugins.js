@@ -4,8 +4,12 @@ function addPluginSupport(Lifecycle) {
   var slice = Array.prototype.slice,
       proto = Lifecycle.prototype,
       oldMethods = {},
-      methods = ['normalize', 'locate', 'fetch',
-                 'translate', 'depend', 'instantiate'];
+      methods = ['normalize', 'locate', 'fetch', 'translate',
+                 'depend', 'instantiate'],
+      customOverrides = {
+        normalize: true,
+        depend: true
+      };
 
   function interceptMethod(methodName) {
     return function(normalizedId) {
@@ -28,7 +32,7 @@ function addPluginSupport(Lifecycle) {
   methods.forEach(function(methodName) {
     oldMethods[methodName] = proto[methodName];
     // normalize is special since it normalizes IDs used by the other methods.
-    if (methodName !== 'normalize' && methodName !== 'depend') {
+    if (!customOverrides[methodName]) {
       proto[methodName] = interceptMethod(methodName);
     }
   });

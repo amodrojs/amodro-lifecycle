@@ -54,9 +54,9 @@ var amodro, define;
     require.normalize = function(relId) {
       return instance.top.normalize(relId, refId);
     };
-    require.locate = function(relId) {
+    require.locate = function(relId, suggestedExtension) {
       var id = instance.top.normalize(relId, refId);
-      return instance.top.locate(id);
+      return instance.top.locate(id, suggestedExtension);
     };
 
 //todo: specified and defined?
@@ -82,10 +82,11 @@ var amodro, define;
       }
     },
 
-    locate: function(normalizedId) {
+    locate: function(normalizedId, suggestedExtension) {
       // sync
 //todo: locations config, bundles config?
-      return this.config.baseUrl + normalizedId + '.js';
+      return this.config.baseUrl + normalizedId +
+             (suggestedExtension ? '.' + suggestedExtension : '');
     },
 
     fetch: function(normalizedId, location) {
@@ -111,6 +112,17 @@ var amodro, define;
       }.bind(this));
 
       return Promise.resolve(deps);
+    },
+
+    evaluate: function(normalizedId, location, source) {
+      var result = amodro.evaluate(source);
+
+      // If evaluate is being called, then it means there was source input.
+      // Need to call execComplete to bring in any define()'d modules into the
+      // loader.
+      this.execCompleted(normalizedId);
+
+      return result;
     },
 
     instantiate: function(normalizedId, normalizedDeps, factory) {
@@ -343,8 +355,8 @@ var amodro, define;
 }());
 
 // Done outside the closure to limit eval seeing closure contents.
-if (!amodro.exec) {
-  amodro.exec = function(t) {
+if (!amodro.evaluate) {
+  amodro.evaluate = function(t) {
     /*jshint evil: true */
     eval(t);
   };

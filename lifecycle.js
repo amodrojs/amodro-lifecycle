@@ -17,7 +17,7 @@ function Lifecycle(parent) {
 (function() {
   'use strict';
 
-  function exec(lifecycle, normalizedId, location, source) {
+  function evaluate(lifecycle, normalizedId, location, source) {
     /*jshint evil: true */
     eval(source);
   }
@@ -172,7 +172,7 @@ function Lifecycle(parent) {
         }
 
         // Not already waiting or in registry, needs to be fetched/loaded.
-        var location = this.top.locate(normalizedId);
+        var location = this.top.locate(normalizedId, 'js');
         return this.top.load(normalizedId, location, factorySequence);
       }.bind(this))
       .then(function() {
@@ -285,10 +285,11 @@ function Lifecycle(parent) {
     },
 
     /**
-     * Used internally to evaluate the source a of module. May not apply in some
-     * module situations, like AMD modules loaded via script tags. Can be
-     * overridden if execution should happen differently. For instance, in node,
-     * perhaps using the vm module to execute the script.
+     * Evaluates the source a of module. May not apply in some module
+     * situations, like AMD modules loaded via script tags. Can be overridden if
+     * execution should happen differently. For instance, in node, perhaps using
+     * the vm module to execute the script. Or for loader plugins, making sure
+     * the evaluated result gets converted to registry entries.
      *
      * The result of the execution should place result in a this.registry entry,
      * if the module has dependencies and wants to export a specific module
@@ -299,7 +300,7 @@ function Lifecycle(parent) {
      * @param  {String} source
      */
     evaluate: function(normalizedId, location, source) {
-      exec(this, normalizedId, location, source);
+      evaluate(this, normalizedId, location, source);
     },
 
     /**
@@ -355,9 +356,9 @@ function Lifecycle(parent) {
       return id;
     },
 
-    locate: function(id) {
+    locate: function(id, suggestedExtension) {
       // sync
-      return id + '.js';
+      return id + (suggestedExtension ? '.' + suggestedExtension : '');
     },
 
     fetch: function(id, location) {
