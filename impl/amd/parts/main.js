@@ -55,7 +55,7 @@ var amodro, define;
       }
 
       var p = Promise.all(deps.map(function(dep) {
-        return instance.use(dep, refId);
+        return instance.useUnnormalized(dep, refId);
       }));
 
       if (callback) {

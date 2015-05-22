@@ -98,7 +98,7 @@ function Lifecycle(parent) {
      * order based on dependency tree.
      * @return {Promise}                 Promise, resolves to module ID value.
      */
-    use: function(id, refId, factorySequence) {
+    useUnnormalized: function(id, refId, factorySequence) {
       var normalizedId;
 
       // Top level use calls may be loader plugin resources, so ask for depend
@@ -112,7 +112,24 @@ function Lifecycle(parent) {
         } catch (e) {
           moduleError(id + ', ' + refId, e);
         }
+        return this.use(normalizedId, refId, factorySequence);
+      }.bind(this));
+    },
 
+    /**
+     * Triggers loading and resolution of modules after an ID has been
+     * normalized. Outside callers of this function should only pass id and
+     * refId. factorySequence is used internally to track recursive tracing of
+     * modules and proper cycle breaking.
+     * @param  {String} normalizedId    The normalized string ID of the module
+     * @param  {String} refId           A reference module ID, used to relate
+     * this use call to another module for cycle/dependency tracing.
+     * @param  {Array} [factorySequence] Used internally to track execution
+     * order based on dependency tree.
+     * @return {Promise}                 Promise, resolves to module ID value.
+     */
+    use: function(normalizedId, refId, factorySequence) {
+      return Promise.resolve().then(function() {
         // If already defined, just resturn the module.
         var moduleValue = this.getModule(normalizedId);
         if (moduleValue) {
@@ -121,7 +138,7 @@ function Lifecycle(parent) {
 
         if (!factorySequence) {
           this.factorySequences.push(factorySequence = {
-            desc: (refId || '[Top]') + ' asking for ' + id,
+            desc: (refId || '[Top]') + ' asking for ' + normalizedId,
             depCount: 0,
             depOrder: [],
             depIds: {}
@@ -235,7 +252,7 @@ function Lifecycle(parent) {
       }
 
       return Promise.all(deps.map(function(depId) {
-        return this.use(depId, normalizedId, factorySequence);
+        return this.useUnnormalized(depId, normalizedId, factorySequence);
       }.bind(this)));
     },
 

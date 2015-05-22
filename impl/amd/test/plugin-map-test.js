@@ -36,11 +36,6 @@ require('./tester')(module.id, function (loader, define, assert, done) {
       },
       'employee': {
         'person': 'person',
-      },
-      // NOTE THIS DIFFERENCE WITH REQUIREJS: loader plugin ID that references
-      // person just wants person too.
-      'plugin!person': {
-        'person': 'person'
       }
     }
   });

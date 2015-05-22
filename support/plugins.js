@@ -90,7 +90,7 @@ function addPluginSupport(Lifecycle) {
 
     if (plugins.length) {
       return Promise.all(plugins.map(function(pluginId) {
-        return this.use(pluginId, normalizedId);
+        return this.useUnnormalized(pluginId, normalizedId);
       }.bind(this))).then(function() {
         return oldMethods.depend.call(this, normalizedId, deps);
       }.bind(this));
@@ -137,6 +137,7 @@ function addPluginSupport(Lifecycle) {
     });
 
     // Add some proxied methods for some loader pieces
+    makeProxyMethod(proxy, 'useUnnormalized', instance);
     makeProxyMethod(proxy, 'use', instance);
     makeProxyMethod(proxy, 'setModule', instance);
     makeProxyMethod(proxy, 'evaluate', instance);
