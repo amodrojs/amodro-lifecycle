@@ -29,3 +29,19 @@ implies cleanup up registry values when done?
 ## Difference with requirejs:
 
 * plugin API is different.
+
+
+
+## API work
+* on() events?
+* undef?
+
+# requirejs adapter
+
+* use moduleData instead of config? For now, provide
+  both on `module`
+* shim config?
+* amodro = {} and requirejs.config() and requirejs({}) support
+* data-main: data-sequence and data-serial?
+* scrub the other config options, like waitSeconds
+* loader plugin API adapter?

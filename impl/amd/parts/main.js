@@ -373,6 +373,9 @@ var amodro, define;
             }.bind(this));
           }.bind(this));
         } else {
+          if (!hasProp(this.config, key)) {
+            this.config[key] = {};
+          }
           deepMix(this.config[key], cfg[key]);
         }
       }.bind(this));
@@ -460,6 +463,8 @@ var amodro, define;
     };
 
     //INSERT fetch.js
+
+    //INSERT requirejs-to-amodro.js
   }
 
 
