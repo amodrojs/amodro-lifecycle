@@ -78,7 +78,8 @@ function addPluginSupport(Lifecycle) {
 
         // Do not do extra work if the plugin has already been loaded.
         if (!hasProp(definedPlugins, normalizedId)) {
-          definedPlugins[normalizedDep] = !!this.getModule(normalizedDep);
+          definedPlugins[normalizedDep] = !!this.getModule(normalizedDep) &&
+                                          !this.getWaiting(normalizedDep);
         }
 
         if (!definedPlugins[normalizedDep] &&

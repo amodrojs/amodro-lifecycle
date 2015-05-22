@@ -53,6 +53,14 @@ function Lifecycle(parent) {
       return waiting || undefined;
     },
 
+    removeWaiting: function(normalizedId) {
+      if (hasProp(this.waiting, normalizedId)) {
+        delete this.waiting[normalizedId];
+      } else if (this.parent) {
+        this.parent.removeWaiting(normalizedId);
+      }
+    },
+
     getRegistered: function(normalizedId) {
       var record,
           registered = getOwn(this.registry, normalizedId);
@@ -66,6 +74,14 @@ function Lifecycle(parent) {
         record = this.parent.getRegistered(normalizedId);
       }
       return record;
+    },
+
+    removeRegistered: function(normalizedId) {
+      if (hasProp(this.registry, normalizedId)) {
+        delete this.registry[normalizedId];
+      } else if (this.parent) {
+        this.parent.removeRegistry(normalizedId);
+      }
     },
 
     getModule: function(normalizedId, throwOnMiss) {
@@ -332,6 +348,8 @@ function Lifecycle(parent) {
           this.modules[depId] = this.instantiate(depId,
                                                  registered.deps,
                                                  registered.factory);
+        this.removeRegistered(depId);
+        this.removeWaiting(depId);
         } catch (e) {
           moduleError(depId, e);
         }
