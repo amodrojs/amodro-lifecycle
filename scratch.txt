@@ -30,7 +30,7 @@ implies cleanup up registry values when done?
 
 * plugin API is different.
 
-
+* alias/map needs to include loader plugin IDs in addition to referring module. See plugin-map-test.js NOTE THIS DIFFERENCE comment.
 
 ## API work
 * on() events?
@@ -45,3 +45,12 @@ implies cleanup up registry values when done?
 * data-main: data-sequence and data-serial?
 * scrub the other config options, like waitSeconds
 * loader plugin API adapter?
+
+
+
+------------
+
+
+function logFS(fs) {
+  return fs ? JSON.stringify(fs) : 'undefined';
+}

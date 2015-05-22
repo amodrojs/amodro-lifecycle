@@ -67,13 +67,22 @@ function addPluginSupport(Lifecycle) {
   };
 
   proto.depend = function(normalizedId, deps) {
-    var plugins = [];
+    var plugins = [],
+        definedPlugins = {};
+
     deps.forEach(function(id) {
       var index = id.indexOf('!');
       if (index !== -1) {
         var normalizedDep = this
                             .normalize(id.substring(0, index), normalizedId);
-        if (plugins.indexOf(normalizedDep) === -1) {
+
+        // Do not do extra work if the plugin has already been loaded.
+        if (!hasProp(definedPlugins, normalizedId)) {
+          definedPlugins[normalizedDep] = !!this.getModule(normalizedDep);
+        }
+
+        if (!definedPlugins[normalizedDep] &&
+            plugins.indexOf(normalizedDep) === -1) {
           plugins.push(normalizedDep);
         }
       }

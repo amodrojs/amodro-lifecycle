@@ -4,17 +4,14 @@ require('./tester')(module.id, function (loader, define, assert, done) {
   define('plugin', ['module'], function(module) {
     return {
       fetch: function (loader, resourceId, location) {
-debugger;
         return loader.use(resourceId, module.id + '!' + resourceId)
         .then(function(moduleValue) {
-console.log(JSON.stringify(moduleValue));
           loader.setModule(module.id + '!' + resourceId, moduleValue);
         });
       }
     };
   });
 
-debugger;
   define('person', [], {
       name: 'person'
   });
@@ -38,6 +35,11 @@ debugger;
         'person': 'employee'
       },
       'employee': {
+        'person': 'person',
+      },
+      // NOTE THIS DIFFERENCE WITH REQUIREJS: loader plugin ID that references
+      // person just wants person too.
+      'plugin!person': {
         'person': 'person'
       }
     }
