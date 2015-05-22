@@ -105,10 +105,13 @@ var amodro, define;
 
       var location,
           normalizedLocations = this.config._normalizedLocations,
+          bundleId = getOwn(this.config._bundlesMap, normalizedId),
           segment = normalizedId,
           firstPass = true;
 
-//todo: add bundles config?
+      if (bundleId) {
+        return this.locate(bundleId, suggestedExtension);
+      }
 
       while (segment) {
         // If not the first pass match, then look for id + '/' matches,
@@ -361,6 +364,14 @@ var amodro, define;
             baseUrl += '/';
           }
           config.baseUrl = baseUrl;
+        } else if (key === 'bundles') {
+          Object.keys(cfg.bundles).forEach(function(key) {
+            var values = cfg.bundles[key];
+            this.config.bundles[key] = values;
+            values.forEach(function(value) {
+              this.config._bundlesMap[value] = key;
+            }.bind(this));
+          }.bind(this));
         } else {
           deepMix(this.config[key], cfg[key]);
         }
@@ -385,8 +396,10 @@ var amodro, define;
     this.config = {
       baseUrl: './',
       config: {},
+      bundles: {},
+      locations: {},
       _normalizedLocations: {},
-      locations: {}
+      _bundlesMap: {}
     };
 
     // Seed entries for special dependencies so they are not requested by
