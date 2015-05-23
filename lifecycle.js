@@ -100,6 +100,7 @@ function Lifecycle(parent) {
       if(!hasProp(this.modules, normalizedId)) {
         this.modules[normalizedId] = value;
       }
+      return value;
     },
 
     /**

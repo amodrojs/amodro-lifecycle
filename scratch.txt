@@ -44,6 +44,7 @@ implies cleanup up registry values when done?
 * on() events?
 * undef?
 
+
 # requirejs adapter
 
 * use moduleData instead of config? For now, provide
@@ -53,7 +54,7 @@ implies cleanup up registry values when done?
 * data-main: data-sequence and data-serial?
 * scrub the other config options, like waitSeconds
 * loader plugin API adapter?
-
+* paths fallback: done in fetch() implementation.
 
 
 ------------
