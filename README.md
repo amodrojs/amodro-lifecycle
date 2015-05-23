@@ -1,6 +1,6 @@
 # amodro-lifecycle
 
-JS module loader lifecycle engine. Not a module system iteself, but a building block used to construct a specific module system.
+JS module loader lifecycle engine. Not a module system itself, but a building block used to construct a specific module system.
 
 Still in early development, but it is promising.
 
@@ -10,6 +10,13 @@ Feature set goals:
 * cycle detection and proper ordering of module execution.
 * parent/child loaders for the possibility of nested modules, with a "top" loader used for fetches.
 * Enough flexibility in API use to allow synchronous or asynchronous module loaders.
+
+TOC:
+
+* [Usage](#usage)
+* [Lifecycle](#lifecycle)
+* [Design forces](#design-forces)
+
 
 ## Usage
 
@@ -183,7 +190,7 @@ The `impl` example for AMD is pretty far along, and it seems to be working out w
 
 For Node, if looking to integrate ES modules, Node's module system could be built on top of something like Lifecycle.
 
-The combo of synchronous `normalize` and `locate` allows Node to synchonously file scan nested node_modules to find the module definition. It could choose to normalize IDs to paths internally if it wanted.
+The combo of synchronous `normalize` and `locate` allows Node to synchronously file scan nested node_modules to find the module definition. It could choose to normalize IDs to paths internally if it wanted.
 
 Top level application loads could use the full async fetch and depend steps, to allow ES modules and something like AMD loader plugins to work for ES modules that might use that kind of mechanism.
 
@@ -191,7 +198,7 @@ However, instead of instantiating its traditional modules as part of the normal 
 
 I believe it could work out particularly if ES modules define a module meta concept, and node could even "transpile" the ES syntax to, for example, convert `import` identifiers to module meta gets, that Node could intercept.
 
-Some of that is a bit hand wavy, but I believe there is a very good shot of it working out that node could injest the bulk of its traditional modules and have them live beside ES modules.
+Some of that is a bit hand wavy, but I believe there is a very good shot of it working out that node could ingest the bulk of its traditional modules and have them live beside ES modules.
 
 For `require(Expression)` type of dependencies, if it is for a module ID that is a legacy module, for the Lifecycle-style approach, normalization/locating/evaluating/setModule are all synchronous in that approach, so it could work out.
 
@@ -205,7 +212,7 @@ More experimenting needs to happen there, but it feels much more achievable than
 
 I can see an ES module loader defined for the browser using the general approach and lifecycle steps as defined here, and then provide the following special powers (only visible to itself, not something normal scripts could do):
 
-1) Has a default fetch implementation, something that is analagous to script fetching, but: fetch/translate with CORS: If a fetch is done that does not allow access via CORS, then the ES loader treats this similar to the script tag type of loading: translate() gets called with an empty string, or maybe is not called at all, and the loader would evaluate the text in accordance with the boundaries set in item 2).
+1) Has a default fetch implementation, something that is analogous to script fetching, but: fetch/translate with CORS: If a fetch is done that does not allow access via CORS, then the ES loader treats this similar to the script tag type of loading: translate() gets called with an empty string, or maybe is not called at all, and the loader would evaluate the text in accordance with the boundaries set in item 2).
 
 A new CORS property might be needed if there is a concern about intranets that allowed * origins for CORS and did not expect this type of use. In that case, the translate() step is only run with the real text if the property was set. Otherwise, translate is skipped but evaluate can be run on the original script, similar to how script tags operate today.
 
