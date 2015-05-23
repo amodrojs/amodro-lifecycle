@@ -1,3 +1,12 @@
+* use a hasModule check instead of getModule, since module value could be correctly undefined.
+
+* Sometimes get this:
+!! modAName: undefined
+!! modBName: modB1Normalized
+  1) plugin-complex-normalize/test.js (fails)
+
+* plugin-delegated not working, wants to do delgated!r!a where r is aliased to refine. So, nested loader plugin use. Can this work?
+
 * With no exports object defined get: Error: baz failed: TypeError: Cannot set property 'name' of undefined, but the trace is not usable. Perhaps instead of eval while in node, use vm, does that give good context?
 
 * try out parent/child relationship, make sure top is used for lifecycle hooks.
@@ -30,7 +39,6 @@ implies cleanup up registry values when done?
 
 * plugin API is different.
 
-* alias/map needs to include loader plugin IDs in addition to referring module. See plugin-map-test.js NOTE THIS DIFFERENCE comment.
 
 ## API work
 * on() events?
