@@ -61,7 +61,7 @@ The `suggestedExtension` is the type of file extension to add to the location, i
 
 This is useful for AMD-style loader plugin systems, which provide transpiler-type of capabilities asynchronously without a centralized configuration.
 
-`suggestedExtension` can be ignored by the locate step if it wants. For example, if the ID maps to a `data:` URL or a Blob URL.
+`suggestedExtension` can be ignored by the locate step. For example, if the ID maps to a `data:` URL or a Blob URL.
 
 #### fetch
 
