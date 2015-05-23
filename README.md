@@ -31,13 +31,13 @@ It relies on the module system implementing some prototype methods that correspo
 
 The core of what a module system implements on top of Lifecycle are implementations for the following lifecycle steps on Lifecycle's prototype, listed in the rough order they are used by Lifecycle:
 
-* *[String]* **normalize**(*[String]* relativeId, *[String]* referenceId)
-* *String* **locate**(*String* normalizedId, *String* suggestedExtension)
-* [Promise] ***fetch***([String] normalizedId, [String] location)
-* [String] ***translate***([String] normalizedId, [String] location, [String] source)
-* [] ***evaluate***([String] normalizedId, [String] location, [String] source)
-* [Promise] ***depend***([String] normalizedId, [Array] deps)
-* [Object] ***instantiate***([String] normalizedId, [Array] deps, [Function] factory)
+* *String* **normalize** (*String* relativeId, *String* referenceId)
+* *String* **locate** (*String* normalizedId, *String* suggestedExtension)
+* *Promise* **fetch** (*String* normalizedId, *String* location)
+* *String* **translate** (*String* normalizedId, *String* location, *String* source)
+* **evaluate** (*String* normalizedId, *String* location, *String* source)
+* *Promise* **depend** (*String* normalizedId, *Array* deps)
+* *Object* **instantiate** (*String* normalizedId, *Array* deps, *Function* factory)
 
 There are just two asynchronous steps, `fetch` and `depend`. More detail on each step:
 
