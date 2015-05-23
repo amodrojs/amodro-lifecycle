@@ -1,7 +1,7 @@
 require('../../tester')(module.id, function (loader, define, assert, done) {
   loader.config({
     locations: {
-      refine: '../plugin-fromText/refine',
+      refine: '../plugin-fromtext/refine',
       text: '../lib/text'
     },
     alias: {

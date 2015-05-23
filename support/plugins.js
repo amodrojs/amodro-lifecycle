@@ -1,4 +1,4 @@
-/*global hasProp*/
+/*global hasProp, getOwn */
 function addPluginSupport(Lifecycle) {
   'use strict';
 
@@ -103,6 +103,14 @@ function addPluginSupport(Lifecycle) {
   proto.locate = function(normalizedId, suggestedExtension) {
     var pluginDesc = this.getPluginDesc(normalizedId);
     if (pluginDesc) {
+      // Allow for the full plugin ID to be in a bundle.
+      var bundleId = this.config._bundlesMap &&
+                     getOwn(this.config._bundlesMap, normalizedId);
+
+      if (bundleId) {
+        return oldMethods.locate.call(this, bundleId, suggestedExtension);
+      }
+
       var plugin = pluginDesc.plugin,
           resourceId = pluginDesc.resourceId;
       if (plugin.locate) {
