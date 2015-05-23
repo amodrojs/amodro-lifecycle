@@ -53,7 +53,7 @@ For AMD-type, browser-based async systems, loader plugins that modify normalizat
 
 #### locate
 
-    [String] ***locate***([String] normalizedId, [String] suggestedExtension)
+> *String* **locate** (*String* normalizedId, *String* suggestedExtension)
 
 Converts the normalized ID to a file path or URL. Synchronously returns a value. See the notes for [normalize](#normalize), same apply here. Node style systems could either choose to work here or just do it all in normalize.
 
@@ -65,7 +65,7 @@ This is useful for AMD-style loader plugin systems, which provide transpiler-typ
 
 #### fetch
 
-    [Promise] ***fetch***([String] normalizedId, [String] location)
+> *Promise* **fetch** (*String* normalizedId, *String* location)
 
 Asynchronously fetches the text at the location. The promise resolves to the text value of the fetch.
 
@@ -75,7 +75,7 @@ In browser-based async systems, if using script tag loading, [evaluate](#evaluat
 
 #### translate
 
-    [String] **translate**([String] normalizedId, [String] location, [String] source)
+> *String* **translate** (*String* normalizedId, *String* location, *String* source)
 
 Allows translating the source. Useful for transpiled languages.
 
@@ -83,7 +83,7 @@ In browser systems, this may not be called for script tag-loaded resources.
 
 #### evaluate
 
-    [] ***evaluate***([String] normalizedId, [String] location, [String] source)
+> **evaluate** (*String* normalizedId, *String* location, *String* source)
 
 Evaluates the text, after [translate](#translate) is run (if it is run). The implementation could be something like `eval`, or in Node, a script run via the `vm` module.
 
@@ -91,7 +91,7 @@ The result of evaluate should be one or more entries in the registry, via calls 
 
 #### depend
 
-    [Promise] ***depend***([String] normalizedId, [Array] deps)
+> *Promise* **depend** (*String* normalizedId, *Array* deps)
 
 The `deps` array is an array of the **unnormalized**  dependencies that are found for the given normalizedId.
 
@@ -101,7 +101,7 @@ This step allows AMD loader plugins to work and still keep the rest of the steps
 
 #### instantiate
 
-    [Object] ***instantiate***([String] normalizedId, [Array] deps, [Function] factory)
+> *Object* **instantiate** (*String* normalizedId, *Array* deps, *Function* factory)
 
 Called with the deps and factory from the registry entry (initial value set by the module system by calling [addToRegistry](#addToRegistry). Instantiate will be called in the correct order for the list of dependencies that were triggered via a [useUnnormalized](#useUnnormalized) or [use](#use) call.
 
@@ -117,7 +117,7 @@ The source for Lifecycle defines more methods than the ones listed here, but som
 
 #### useUnnormalized
 
-    [Promise] **useUnnormalized**([String] id, [String] refId)
+> *Promise* **useUnnormalized** (*String* id, *String* refId)
 
 Called by a loader when the unnormalized ID is wanted. It will run [depend](#depend), then [normalize](#normalize), then call [use](#use).
 
@@ -125,7 +125,7 @@ The Promise is resolved to the module value.
 
 #### use
 
-    [Promise] **use**([String] normalizedId, [String] refId)
+> *Promise* **use** (*String* normalizedId, *String* refId)
 
 The main driver for the loading lifecycle.
 
@@ -135,7 +135,7 @@ The Promise is resolved to the module value.
 
 #### addToRegistry
 
-    [] **addToRegistry**([String] normalizedId, [Array] deps, [Function] factory)
+> **addToRegistry** (*String* normalizedId, *Array* deps, *Function* factory)
 
 Adds a module to the registry of modules that are known to Lifecycle, but do not yet exist as resolved module values.
 
@@ -151,7 +151,7 @@ The registry entries are what are passed to the [instantiate](#instantiate) step
 
 #### setModule
 
-    [Object] **setModule**([String] normalizedId, [Object] value)
+> *Object* **setModule** (*String* normalizedId, *Object* value)
 
 Sets the final module value for the normalized module ID. Returns the value that was passed to it.
 
