@@ -43,7 +43,7 @@ There are just two asynchronous steps, `fetch` and `depend`. More detail on each
 
 #### normalize
 
-    [String] **normalize**([String] relativeId, [String] referenceId)
+> *String* **normalize** (*String* relativeId, *String* referenceId)
 
 This allows a module 'a' (referenceId) that asks for a module './sub/b' (relativeId) to be resolved to 'a/sub/b', or some normalized name that is used for the key into the Lifecycle to store and reference the module value.
 
