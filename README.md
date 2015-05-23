@@ -31,8 +31,8 @@ It relies on the module system implementing some prototype methods that correspo
 
 The core of what a module system implements on top of Lifecycle are implementations for the following lifecycle steps on Lifecycle's prototype, listed in the rough order they are used by Lifecycle:
 
-* [String] ***normalize***([String] relativeId, [String] referenceId)
-* [String] ***locate***([String] normalizedId, [String] suggestedExtension)
+* *[String]* **normalize**(*[String]* relativeId, *[String]* referenceId)
+* *String* **locate**(*String* normalizedId, *String* suggestedExtension)
 * [Promise] ***fetch***([String] normalizedId, [String] location)
 * [String] ***translate***([String] normalizedId, [String] location, [String] source)
 * [] ***evaluate***([String] normalizedId, [String] location, [String] source)
@@ -43,7 +43,7 @@ There are just two asynchronous steps, `fetch` and `depend`. More detail on each
 
 #### normalize
 
-    [String] ***normalize***([String] relativeId, [String] referenceId)
+    [String] **normalize**([String] relativeId, [String] referenceId)
 
 This allows a module 'a' (referenceId) that asks for a module './sub/b' (relativeId) to be resolved to 'a/sub/b', or some normalized name that is used for the key into the Lifecycle to store and reference the module value.
 
@@ -75,7 +75,7 @@ In browser-based async systems, if using script tag loading, [evaluate](#evaluat
 
 #### translate
 
-    [String] ***translate***([String] normalizedId, [String] location, [String] source)
+    [String] **translate**([String] normalizedId, [String] location, [String] source)
 
 Allows translating the source. Useful for transpiled languages.
 
