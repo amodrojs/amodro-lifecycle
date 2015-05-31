@@ -195,14 +195,10 @@ function Lifecycle(parent) {
         var record = this.getRegistered(normalizedId);
         if (record) {
           var registered = record.registered;
-          var p = record.instance.waiting[normalizedId] = registered.deps &&
-            registered.deps.length ?
-            this.top.callDepend(normalizedId, registered.deps) :
-            Promise.resolve();
-
-          return p.then(function(deps) {
-            return this.useNormalizedDeps(normalizedId, deps, factorySequence);
-          }.bind(this));
+          return (record.instance.waiting[normalizedId] =
+            this.waitForRegisteredDeps(normalizedId,
+                                       registered,
+                                       factorySequence));
         }
 
         // Not already waiting or in registry, needs to be fetched/loaded.
@@ -245,25 +241,16 @@ function Lifecycle(parent) {
           }
 
           var registered = getOwn(this.registry, normalizedId);
-          if (!registered || !registered.deps || !registered.deps.length) {
-            // Could be a script with no formal dependencies or exports.
-            return [];
-          } else {
-            // Dependencies should not be normalized yet. Allow an async step
-            // here to allow mechanisms, like AMD loader plugins, to async load
-            // plugins before absolute resolving the IDs.
-            return this.callDepend(normalizedId, registered.deps);
-          }
+          return this.waitForRegisteredDeps(normalizedId,
+                                            registered,
+                                            factorySequence);
         } catch (e) {
           moduleError(normalizedId, e);
         }
-      }.bind(this))
-      .then(function (deps) {
-        return this.useNormalizedDeps(normalizedId, deps, factorySequence);
       }.bind(this)));
     },
 
-    useNormalizedDeps: function(normalizedId, deps, factorySequence) {
+    useUnnormalizedDeps: function(normalizedId, deps, factorySequence) {
       if (!deps || !deps.length) {
         return;
       }
@@ -271,6 +258,19 @@ function Lifecycle(parent) {
       return Promise.all(deps.map(function(depId) {
         return this.useUnnormalized(depId, normalizedId, factorySequence);
       }.bind(this)));
+    },
+
+    waitForRegisteredDeps: function(normalizedId, registered, factorySequence) {
+      if (registered && registered.deps && registered.deps.length) {
+        return this.top.callDepend(normalizedId, registered.deps)
+        .then(function(deps) {
+          return this
+          .useUnnormalizedDeps(normalizedId, deps, factorySequence);
+        }.bind(this));
+      } else {
+        // Nothing to wait for just go to next step.
+        return;
+      }
     },
 
     /**

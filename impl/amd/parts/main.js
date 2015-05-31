@@ -407,7 +407,9 @@ var amodro, define;
 
     // Seed entries for special dependencies so they are not requested by
     // lifecycle.
-    this.modules.require = this.modules.exports = this.modules.module = {};
+    this.setModule('require', {});
+    this.setModule('exports', {});
+    this.setModule('module', {});
   }
 
   LoaderLifecyle.prototype = Lifecycle.prototype;
