@@ -168,11 +168,10 @@ var amodro, define;
       // async. deps are not normalized yet.
 
       deps.forEach(function(dep) {
-        if ((dep === 'exports' || dep === 'module') &&
-                   !hasProp(this.modules, normalizedId)) {
+        if ((dep === 'exports' || dep === 'module')) {
           // If wanting exports or module (with its module.exports), seed the
           // module value in case it is needed for cycles.
-          this.modules[normalizedId] = {};
+          this.setModule(normalizedId, {}, true);
         }
       }.bind(this));
 

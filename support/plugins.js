@@ -41,7 +41,6 @@ function addPluginSupport(Lifecycle) {
 
   methods.forEach(function(methodName) {
     oldMethods[methodName] = proto[methodName];
-    // normalize is special since it normalizes IDs used by the other methods.
     if (!customOverrides[methodName]) {
       proto[methodName] = interceptMethod(methodName);
     }

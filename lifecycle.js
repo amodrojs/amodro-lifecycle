@@ -9,6 +9,7 @@ function Lifecycle(parent) {
   this.parent = parent;
   this.top = parent ? parent.top : this;
   this.modules = {};
+  this.instantiated = {};
   this.registry = {};
   this.waiting = {};
   this.factorySequences = [];
@@ -16,6 +17,19 @@ function Lifecycle(parent) {
 
 (function() {
   'use strict';
+
+  var log = function(msg) {
+    // console.log(msg);
+  };
+
+  var fsIdCounter = 0;
+  var fslog = function(fs, msg) {
+    // var fsId = '[none]';
+    // if (fs && fs.desc) {
+    //   fsId = '[' + fs.desc + ']';
+    // }
+    // return log(fsId + ' ' + msg);
+  };
 
   function evaluate(lifecycle, normalizedId, location, source) {
     /*jshint evil: true */
@@ -96,9 +110,13 @@ function Lifecycle(parent) {
       }
     },
 
-    setModule: function(normalizedId, value) {
-      if(!hasProp(this.modules, normalizedId)) {
+    setModule: function(normalizedId, value, isTemp) {
+      if(!hasProp(this.instantiated, normalizedId)) {
+        log('Setting module for ' + normalizedId + ': ' + value);
         this.modules[normalizedId] = value;
+        if (!isTemp) {
+          this.instantiated[normalizedId] = true;
+        }
       }
       return value;
     },
@@ -118,12 +136,13 @@ function Lifecycle(parent) {
     useUnnormalized: function(id, refId, factorySequence) {
       var normalizedId;
 
+      fslog(factorySequence, 'useUnnormalized: ' + id + ', ' + refId);
       // Top level use calls may be loader plugin resources, so ask for depend
       // hooks to determine if there are any other dependencies for the id
       // before proceeding.
-      //
       return ensurePromise(this.top.depend(refId, [id]))
       .then(function() {
+        fslog(factorySequence, 'useUnnormalized.then: ' + id + ', ' + refId);
         try {
           normalizedId = this.top.normalize(id, refId);
         } catch (e) {
@@ -146,20 +165,30 @@ function Lifecycle(parent) {
      * @return {Promise}                 Promise, resolves to module ID value.
      */
     use: function(normalizedId, refId, factorySequence) {
+      var instantiated = false;
+
       return Promise.resolve().then(function() {
+        fslog(factorySequence, 'use: ' + normalizedId + ', ' + refId);
+
         // If already defined, just resturn the module.
-        var moduleValue = this.getModule(normalizedId);
-        if (moduleValue) {
-          return moduleValue;
+        if (hasProp(this.instantiated, normalizedId)) {
+          fslog(factorySequence, 'use: ' + normalizedId +
+                ' has module, returning');
+          instantiated = true;
+          return;
         }
 
         if (!factorySequence) {
           this.factorySequences.push(factorySequence = {
-            desc: (refId || '[Top]') + ' asking for ' + normalizedId,
+            desc: (refId || '[Top]') + ' asking for ' + normalizedId +
+                  ' (id' + (fsIdCounter++) + ')',
             depCount: 0,
             depOrder: [],
             depIds: {}
           });
+
+          fslog(factorySequence, 'use: created factorySequence: ' +
+                normalizedId + ': ' + refId);
 
           // Indicate refId as already being in the factorySequence, so
           // if it shows up in execution sequence later, it is considered a
@@ -171,6 +200,9 @@ function Lifecycle(parent) {
 
         if (hasProp(factorySequence.depIds, normalizedId)) {
           this.cycleDetected(normalizedId, factorySequence.depOrder);
+          // Return from here to break the cycle
+          instantiated = true;
+          return;
         } else {
           factorySequence.depCount += 1;
           factorySequence.depOrder.unshift(normalizedId);
@@ -186,6 +218,7 @@ function Lifecycle(parent) {
         }
 
         if (waiting) {
+          fslog(factorySequence, 'use: returning waiting: ' + normalizedId);
           return waiting;
         }
 
@@ -195,6 +228,8 @@ function Lifecycle(parent) {
         var record = this.getRegistered(normalizedId);
         if (record) {
           var registered = record.registered;
+          fslog(factorySequence, 'use: returning registered entry: ' +
+                normalizedId);
           return (record.instance.waiting[normalizedId] =
             this.waitForRegisteredDeps(normalizedId,
                                        registered,
@@ -203,15 +238,23 @@ function Lifecycle(parent) {
 
         // Not already waiting or in registry, needs to be fetched/loaded.
         var location = this.top.locate(normalizedId, 'js');
+        fslog(factorySequence, 'use: calling load: ' + normalizedId +
+              ', ' + location);
         return this.top.load(normalizedId, location, factorySequence);
       }.bind(this))
       .then(function() {
+        fslog(factorySequence, 'use.then: ' + normalizedId);
+
         // If the ID was part of a factory sequence, indicate complete. It may
         // not be if the module was already in modules.
-        if (factorySequence) {
+        if (factorySequence && !instantiated) {
           this.factorySequenceDepComplete(factorySequence);
         }
-        return this.getModule(normalizedId);
+        var value = this.getModule(normalizedId);
+
+        fslog(factorySequence, 'use.then returning module value: ' +
+              normalizedId + ': ' + value);
+        return value;
       }.bind(this));
     },
 
@@ -223,24 +266,38 @@ function Lifecycle(parent) {
      * @return {Promise}
      */
     load: function(normalizedId, location, factorySequence) {
+      fslog(factorySequence, 'load: calling fetch, setting waiting: ' +
+            normalizedId);
       return (this.waiting[normalizedId] =
       ensurePromise(this.fetch(normalizedId, location))
       .then(function(source) {
+        fslog(factorySequence, 'load.fetch.then: ' + normalizedId);
+        log(source);
+
         try {
           // Protect against fetch promise results being something like a
           // module value, in the case of plugins.
           if (typeof source === 'string' && source) {
             source = this.translate(normalizedId, location, source);
+            fslog(factorySequence, 'load.fetch.then called translate: ' +
+                  normalizedId);
+            log(source);
           }
 
           // Some cases, like script tag-based loading, do not have source to
           // evaluate, hidden by browser security restrictions from seeing the
           // source.
           if (typeof source === 'string' && source) {
+            fslog(factorySequence, 'load.fetch.then calling evaluate: ' +
+                  normalizedId);
             this.evaluate(normalizedId, location, source);
           }
 
           var registered = getOwn(this.registry, normalizedId);
+
+            fslog(factorySequence, 'load.fetch.then calling ' +
+                  'waitForRegisteredDeps: ' + normalizedId + ': ' + registered);
+
           return this.waitForRegisteredDeps(normalizedId,
                                             registered,
                                             factorySequence);
@@ -261,14 +318,22 @@ function Lifecycle(parent) {
     },
 
     waitForRegisteredDeps: function(normalizedId, registered, factorySequence) {
+      fslog(factorySequence, 'waitForRegisteredDeps: ' + normalizedId);
       if (registered && registered.deps && registered.deps.length) {
-        return this.top.callDepend(normalizedId, registered.deps)
+        return this.top.callDepend(normalizedId,
+                                   registered.deps,
+                                   factorySequence)
         .then(function(deps) {
+        fslog(factorySequence, 'waitForRegisteredDeps.then: ' +
+              'callDepend finished: ' + normalizedId +
+              ' calling useUnnormalizedDeps: ' + deps);
           return this
           .useUnnormalizedDeps(normalizedId, deps, factorySequence);
         }.bind(this));
       } else {
         // Nothing to wait for just go to next step.
+        fslog(factorySequence, 'waitForRegisteredDeps: nothing to wait, ' +
+              'return undefined: ' + normalizedId);
         return;
       }
     },
@@ -291,6 +356,8 @@ function Lifecycle(parent) {
         };
 
         this.registry[normalizedId] = entry;
+
+        log('addToRegistry: ' + normalizedId + ': ' + deps);
       }
     },
 
@@ -301,9 +368,13 @@ function Lifecycle(parent) {
      * @param  {Array} deps
      * @return {Promise}
      */
-    callDepend: function(normalizedId, deps) {
+    callDepend: function(normalizedId, deps, factorySequence) {
+      fslog(factorySequence, 'callDepend: ' + normalizedId + ', ' + deps);
       return ensurePromise(this.depend(normalizedId, deps))
       .then(function(deps) {
+        fslog(factorySequence, 'callDepend.then: ' + normalizedId +
+                               ', ' + deps);
+
         var normalizedDeps = deps.map(function(depId) {
           return this.normalize(depId, normalizedId);
         }.bind(this));
@@ -327,6 +398,10 @@ function Lifecycle(parent) {
      */
     factorySequenceDepComplete: function(factorySequence) {
       factorySequence.depCount -= 1;
+
+      fslog(factorySequence, 'factorySequenceDepComplete: ' +
+            factorySequence.depCount);
+
       if (factorySequence.depCount !== 0) {
         return;
       }
@@ -334,6 +409,9 @@ function Lifecycle(parent) {
       // Sequences are now complete, execute factories for the dependency chain
       // in the right order, as according to depOrder.
       var order = factorySequence.depOrder;
+
+      fslog(factorySequence, 'factorySequenceDepComplete order: ' + order);
+
       for (var i = 0; i < order.length; i++) {
         var depId = order[i],
             registeredEntry = this.getRegistered(depId);
@@ -346,9 +424,9 @@ function Lifecycle(parent) {
 
         var registered = registeredEntry.registered;
         try {
-          this.modules[depId] = this.instantiate(depId,
+          this.setModule(depId, this.instantiate(depId,
                                                  registered.deps,
-                                                 registered.factory);
+                                                 registered.factory));
         this.removeRegistered(depId);
         this.removeWaiting(depId);
         } catch (e) {
