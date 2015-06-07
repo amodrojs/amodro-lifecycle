@@ -185,7 +185,8 @@ function Lifecycle(parent) {
                   ' (id' + (fsIdCounter++) + ')',
             depCount: 0,
             depOrder: [],
-            depIds: {}
+            depIds: {},
+            cycleDetected: {}
           });
 
           fslog(factorySequence, 'use: created factorySequence: ' +
@@ -200,7 +201,11 @@ function Lifecycle(parent) {
         }
 
         if (hasProp(factorySequence.depIds, normalizedId)) {
-          this.cycleDetected(normalizedId, factorySequence.depOrder);
+          if (!hasProp(factorySequence.cycleDetected, normalizedId)) {
+            factorySequence.cycleDetected[normalizedId] = true;
+            this.cycleDetected(normalizedId, factorySequence.depOrder);
+          }
+
           // Return from here to break the cycle
           instantiated = true;
           return;

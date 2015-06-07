@@ -86,7 +86,8 @@ var amodro, define;
   var protoMethods = {
     // START overrides
     cycleDetected: function(id, cycleOrder) {
-      console.log('Cycle detected: ' + id + ',' + cycleOrder);
+      console.log('Cycle detected, \'' + id + '\' already in list: ' +
+                  cycleOrder);
     },
 
     normalize: function(id, refId) {
