@@ -19,16 +19,16 @@ function Lifecycle(parent) {
   'use strict';
 
   var log = function(msg) {
-    console.log(msg);
+    // console.log(msg);
   };
 
   var fsIdCounter = 0;
   var fslog = function(fs, msg) {
-    var fsId = '[none]';
-    if (fs && fs.desc) {
-      fsId = '[' + fs.desc + ']';
-    }
-    return log(fsId + ' ' + msg);
+    // var fsId = '[none]';
+    // if (fs && fs.desc) {
+    //   fsId = '[' + fs.desc + ']';
+    // }
+    // return log(fsId + ' ' + msg);
   };
 
   function evaluate(lifecycle, normalizedId, location, source) {
@@ -244,16 +244,24 @@ function Lifecycle(parent) {
         return this.top.load(normalizedId, location, factorySequence);
       }.bind(this))
       .then(function() {
+        // If considered "instantiate" skip the dependency tracing for
+        // factorySequence. Could really be instantiated or a cycle that should
+        // be considered "instantiated" to resolve the cycle.
         if (instantiated) {
           return;
         }
 
         // Now that the module has had its deps normalized, use them all, and
-        // track them on the factorySequence.
+        // track them on the factorySequence. Need this to happen for every
+        // factorySequence that comes through to poperly get full dependency
+        // chain. But only needs to be done if module is still in registry
+        // waiting completion of full processing.
         var record = this.getRegistered(normalizedId);
-        return this.useDeps(normalizedId,
-                            record.registered.deps,
-                            factorySequence);
+        if (record) {
+          return this.useDeps(normalizedId,
+                              record.registered.deps,
+                              factorySequence);
+        }
       }.bind(this))
       .then(function() {
         fslog(factorySequence, 'use.then: ' + normalizedId);

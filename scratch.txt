@@ -1,9 +1,4 @@
-* use a hasModule check instead of getModule, since module value could be correctly undefined.
-
-* Sometimes get this:
-!! modAName: undefined
-!! modBName: modB1Normalized
-  1) plugin-complex-normalize/test.js (fails)
+* use a hasModule check instead of getModule, since module value could be correctly undefined?
 
 * plugin-delegated not working, wants to do delgated!r!a where r is aliased to refine. So, nested loader plugin use. Can this work?
 
