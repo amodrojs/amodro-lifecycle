@@ -19,16 +19,16 @@ function Lifecycle(parent) {
   'use strict';
 
   var log = function(msg) {
-    // console.log(msg);
+    console.log(msg);
   };
 
   var fsIdCounter = 0;
   var fslog = function(fs, msg) {
-    // var fsId = '[none]';
-    // if (fs && fs.desc) {
-    //   fsId = '[' + fs.desc + ']';
-    // }
-    // return log(fsId + ' ' + msg);
+    var fsId = '[none]';
+    if (fs && fs.desc) {
+      fsId = '[' + fs.desc + ']';
+    }
+    return log(fsId + ' ' + msg);
   };
 
   function evaluate(lifecycle, normalizedId, location, source) {
@@ -112,7 +112,8 @@ function Lifecycle(parent) {
 
     setModule: function(normalizedId, value, isTemp) {
       if(!hasProp(this.instantiated, normalizedId)) {
-        log('Setting module for ' + normalizedId + ': ' + value);
+        log('Setting module for ' + normalizedId + ': ' + value +
+            (isTemp ? ' [temporary]' : ''));
         this.modules[normalizedId] = value;
         if (!isTemp) {
           this.instantiated[normalizedId] = true;
@@ -231,8 +232,8 @@ function Lifecycle(parent) {
           fslog(factorySequence, 'use: returning registered entry: ' +
                 normalizedId);
           return (record.instance.waiting[normalizedId] =
-            this.waitForRegisteredDeps(normalizedId,
-                                       registered,
+            record.instance.callDepend(normalizedId,
+                                       registered.deps,
                                        factorySequence));
         }
 
@@ -241,6 +242,18 @@ function Lifecycle(parent) {
         fslog(factorySequence, 'use: calling load: ' + normalizedId +
               ', ' + location);
         return this.top.load(normalizedId, location, factorySequence);
+      }.bind(this))
+      .then(function() {
+        if (instantiated) {
+          return;
+        }
+
+        // Now that the module has had its deps normalized, use them all, and
+        // track them on the factorySequence.
+        var record = this.getRegistered(normalizedId);
+        return this.useDeps(normalizedId,
+                            record.registered.deps,
+                            factorySequence);
       }.bind(this))
       .then(function() {
         fslog(factorySequence, 'use.then: ' + normalizedId);
@@ -295,47 +308,26 @@ function Lifecycle(parent) {
 
           var registered = getOwn(this.registry, normalizedId);
 
-            fslog(factorySequence, 'load.fetch.then calling ' +
-                  'waitForRegisteredDeps: ' + normalizedId + ': ' + registered);
+          fslog(factorySequence, 'load.fetch.then calling ' +
+                'callDepend: ' + normalizedId + ': ' + registered);
 
-          return this.waitForRegisteredDeps(normalizedId,
-                                            registered,
-                                            factorySequence);
+          return this.top.callDepend(normalizedId,
+                                     registered.deps,
+                                     factorySequence);
         } catch (e) {
           moduleError(normalizedId, e);
         }
       }.bind(this)));
     },
 
-    useUnnormalizedDeps: function(normalizedId, deps, factorySequence) {
+    useDeps: function(normalizedId, deps, factorySequence) {
       if (!deps || !deps.length) {
         return;
       }
 
       return Promise.all(deps.map(function(depId) {
-        return this.useUnnormalized(depId, normalizedId, factorySequence);
+        return this.use(depId, normalizedId, factorySequence);
       }.bind(this)));
-    },
-
-    waitForRegisteredDeps: function(normalizedId, registered, factorySequence) {
-      fslog(factorySequence, 'waitForRegisteredDeps: ' + normalizedId);
-      if (registered && registered.deps && registered.deps.length) {
-        return this.top.callDepend(normalizedId,
-                                   registered.deps,
-                                   factorySequence)
-        .then(function(deps) {
-        fslog(factorySequence, 'waitForRegisteredDeps.then: ' +
-              'callDepend finished: ' + normalizedId +
-              ' calling useUnnormalizedDeps: ' + deps);
-          return this
-          .useUnnormalizedDeps(normalizedId, deps, factorySequence);
-        }.bind(this));
-      } else {
-        // Nothing to wait for just go to next step.
-        fslog(factorySequence, 'waitForRegisteredDeps: nothing to wait, ' +
-              'return undefined: ' + normalizedId);
-        return;
-      }
     },
 
     /**
@@ -370,6 +362,11 @@ function Lifecycle(parent) {
      */
     callDepend: function(normalizedId, deps, factorySequence) {
       fslog(factorySequence, 'callDepend: ' + normalizedId + ', ' + deps);
+
+      if (!deps || deps.length) {
+        return Promise.resolve([]);
+      }
+
       return ensurePromise(this.depend(normalizedId, deps))
       .then(function(deps) {
         fslog(factorySequence, 'callDepend.then: ' + normalizedId +
