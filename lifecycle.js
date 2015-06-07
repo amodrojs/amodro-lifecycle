@@ -363,7 +363,7 @@ function Lifecycle(parent) {
     callDepend: function(normalizedId, deps, factorySequence) {
       fslog(factorySequence, 'callDepend: ' + normalizedId + ', ' + deps);
 
-      if (!deps || deps.length) {
+      if (!deps || !deps.length) {
         return Promise.resolve([]);
       }
 

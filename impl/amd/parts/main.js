@@ -166,7 +166,6 @@ var amodro, define;
 
     depend: function(normalizedId, deps) {
       // async. deps are not normalized yet.
-
       deps.forEach(function(dep) {
         if ((dep === 'exports' || dep === 'module')) {
           // If wanting exports or module (with its module.exports), seed the
