@@ -16,7 +16,7 @@
     "loader"
   ],
   "author": "James Burke <jrburke@gmail.com> (http://github.com/jrburke)",
-   "licenses": [
+  "licenses": [
     {
       "type": "BSD",
       "url": "https://github.com/amodrodjs/amodro-lifecycle/blob/master/LICENSE"
@@ -31,9 +31,10 @@
   },
   "homepage": "https://github.com/amodrojs/amodro-lifecycle",
   "volo": {
-      "url": "https://raw.githubusercontent.com/amodrojs/amodro-lifecycle/{version}/lifecycle"
+    "url": "https://raw.githubusercontent.com/amodrojs/amodro-lifecycle/{version}/lifecycle"
   },
   "devDependencies": {
+    "esprima": "^2.2.0",
     "mocha": "^2.2.1"
   }
 }

@@ -13,16 +13,9 @@ var amodro, define;
 
   var slice = Array.prototype.slice,
       commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
-      cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g;
-
-//todo: consider removing this duplication.
-  var hasOwn = Object.prototype.hasOwnProperty;
-  function hasProp(obj, prop) {
-      return hasOwn.call(obj, prop);
-  }
-  function getOwn(obj, prop) {
-      return hasProp(obj, prop) && obj[prop];
-  }
+      cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
+      hasProp = Lifecycle.hasProp,
+      getOwn = Lifecycle.getOwn;
 
   function deepMix(dest, source) {
     Object.keys(source).forEach(function(prop) {

@@ -18,18 +18,17 @@ function Lifecycle(parent) {
 (function() {
   'use strict';
 
-  var log = function(msg) {
-    // console.log(msg);
-  };
+  function log(msg) {
+    console.log(msg);
+  }
 
-  var fsIdCounter = 0;
-  var fslog = function(fs, msg) {
-    // var fsId = '[none]';
-    // if (fs && fs.desc) {
-    //   fsId = '[' + fs.desc + ']';
-    // }
-    // return log(fsId + ' ' + msg);
-  };
+  function fslog(fs, msg) {
+    var fsId = '[none]';
+    if (fs && fs.desc) {
+      fsId = '[' + fs.desc + ']';
+    }
+    return log(fsId + ' ' + msg);
+  }
 
   function evaluate(lifecycle, normalizedId, location, source) {
     /*jshint evil: true */
@@ -45,6 +44,11 @@ function Lifecycle(parent) {
       return hasProp(obj, prop) && obj[prop];
   }
 
+  // These helpers are useful when dealing with Lifecycle instance properties,
+  // matches what is used internally.
+  Lifecycle.hasProp = hasProp;
+  Lifecycle.getOwn = getOwn;
+
   function moduleError(id, err) {
     var newError = new Error(id + ' failed: ' + err);
     newError.originalError = err;
@@ -57,6 +61,8 @@ function Lifecycle(parent) {
     }
     return value;
   }
+
+  var fsIdCounter = 0;
 
   Lifecycle.prototype = {
     getWaiting: function(normalizedId) {
