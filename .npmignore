@@ -1,0 +1,7 @@
+build/
+impl/
+support/
+test/
+.jshintrc
+scratch.txt
+*.sh
