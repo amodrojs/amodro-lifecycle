@@ -104,6 +104,30 @@ function Lifecycle(parent) {
       }
     },
 
+    /**
+     * Returns true if the loader contains a module for the module ID. It may
+     * not actually be defined yet though, may still in process of loading, so
+     * to get a handle on it, use async APIs to get to it.
+     * @param  {String}  normalizedId
+     * @return {Boolean}
+     */
+    containsModule: function(normalizedId) {
+      return hasProp(this.modules, normalizedId) ||
+        hasProp(this.registry, normalizedId) ||
+        (this.parent && this.parent.containsModule(normalizedId));
+    },
+
+    /**
+     * Returns true if there is a module value for the given ID. The value may
+     * not be fully defined yet, for a module in a cycle.
+     * @param  {String} normalizedId
+     * @return {Boolean}
+     */
+    hasModule: function(normalizedId) {
+      return hasProp(this.modules, normalizedId) ||
+             (this.parent && this.parent.hasModule(normalizedId));
+    },
+
     getModule: function(normalizedId, throwOnMiss) {
       if (hasProp(this.modules, normalizedId)) {
         return this.modules[normalizedId];
@@ -291,7 +315,8 @@ function Lifecycle(parent) {
     },
 
     /**
-     * Used internally by lifecycle to complete the load of a resource.
+     * Used internally by lifecycle to complete the load of a resource. Results
+     * in a waiting promise set for the normalizedId.
      * @param  {String} normalizedId
      * @param  {String} location
      * @param  {Array} factorySequence

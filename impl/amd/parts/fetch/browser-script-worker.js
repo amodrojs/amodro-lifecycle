@@ -69,8 +69,9 @@ if (typeof importScripts === 'function') {
           resolve();
       }, false);
       script.addEventListener('error', function (err) {
-          err.requireModules = [normalizedId];
-          reject(err);
+          var e = new Error('Load failed: ' + normalizedId + ': ' + script.src);
+          e.moduleId = normalizedId;
+          reject(e);
       }, false);
 
       script.src = location;

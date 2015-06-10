@@ -65,12 +65,23 @@ var amodro, define;
     require.normalize = function(relId) {
       return instance.top.normalize(relId, refId);
     };
+
     require.locate = function(relId, suggestedExtension) {
       var id = instance.top.normalize(relId, refId);
       return instance.top.locate(id, suggestedExtension);
     };
 
-//todo: specified and defined?
+    require.defined = function(relId) {
+      var id = instance.top.normalize(relId, refId);
+      return instance.hasModule(id);
+    };
+
+    require.specified = function(relId) {
+      var id = instance.top.normalize(relId, refId);
+      return instance.containsModule(id);
+    };
+
+    //INSERT requirejs-require-adapter.js
 
     return require;
   }

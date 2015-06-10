@@ -23,6 +23,12 @@
 * plugin API is different.
 
 
+## Differences with requirejs tests:
+
+* edit simple.html to not ask for URLs and remove moreSimpleTests = true.
+* toUrl-tests.js: no ../bower_components resolution because outside ID space.
+
+
 ## API work
 
 * on() events?
@@ -30,11 +36,10 @@
 
 # requirejs adapter
 
+* require.specified and require.defined on makeRequire return value?
 * use moduleData instead of config? For now, provide
   both on `module`
 * shim config?
-* amodro = {} and requirejs.config() and requirejs({}) support
 * data-main: data-sequence and data-serial?
 * scrub the other config options, like waitSeconds
-* loader plugin API adapter?
 * paths fallback: done in fetch() implementation.

@@ -1,4 +1,4 @@
-/*global hasProp, getOwn */
+/*global hasProp, getOwn, makeRequire */
 function addPluginSupport(Lifecycle) {
   'use strict';
 
@@ -30,6 +30,23 @@ function addPluginSupport(Lifecycle) {
           args[0] = pluginDesc.resourceId;
           args.unshift(this.getPluginProxy());
           return plugin[methodName].apply(this, args);
+        } else if (methodName === 'fetch' && plugin.load) {
+          // Legacy loader plugin support.
+          var p = new Promise(function(resolve, reject) {
+            var onload = function(value) {
+              // old load() was like fetch + setModule
+              this.setModule(pluginDesc.id + '!' + pluginDesc.resourceId,
+                             value);
+              resolve();
+            }.bind(this);
+            onload.error = reject;
+
+            plugin.load(pluginDesc.resourceId,
+                        makeRequire(this, pluginDesc.id),
+                        onload,
+                        {});
+          }.bind(this));
+          return p;
         } else if (useResourceId[methodName]) {
           args[0] = pluginDesc.resourceId;
         }
@@ -54,8 +71,16 @@ function addPluginSupport(Lifecycle) {
           resourceId = id.substring(index + 1);
 
       if (plugin.normalize) {
-        return pluginId + '!' +
-               plugin.normalize(this.getPluginProxy(), resourceId, refId);
+        if (plugin.load) {
+          // Legacy plugin API.
+          return pluginId + '!' + plugin.normalize(resourceId, function(id) {
+            return this.normalize(id, refId);
+          }.bind(this));
+        } else {
+          // Shiny new API.
+          return pluginId + '!' +
+                 plugin.normalize(this.getPluginProxy(), resourceId, refId);
+        }
       } else {
         return pluginId + '!' +
                oldMethods.normalize.call(this, resourceId, refId);

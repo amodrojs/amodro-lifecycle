@@ -57,6 +57,7 @@ var permutations = {
     '../../../support/prim.js': '',
     'prim-to-promise.js': '',
     'fetch.js': 'fetch/browser-script-worker.js',
+    'requirejs-require-adapter.js': '',
     'requirejs-to-amodro.js': '',
     'suffix.js': ''
   },
@@ -68,6 +69,7 @@ var permutations = {
     '../../../support/prim.js': '',
     'prim-to-promise.js': '',
     'fetch.js': 'fetch/browser-script-worker.js',
+    'requirejs-require-adapter.js': '',
     'requirejs-to-amodro.js': '',
     'suffix.js': ''
   },
@@ -75,7 +77,7 @@ var permutations = {
   // Base amodro, with some requirejs api support and includes prim.
   'amodro-requirejs-prim': {
     'fetch.js': 'fetch/browser-script-worker.js',
-    'suffix.js': ''
+    'suffix.js': 'suffix/requirejs-to-amodro.js'
   }
 };
 
