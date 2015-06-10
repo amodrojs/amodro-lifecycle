@@ -4,10 +4,16 @@ var fs = require('fs'),
     loadRegExp = /\/\/INSERT ([\w\/\.-]+)/g,
     dir = path.join(__dirname, 'parts'),
     mainFilePath = path.join(dir, 'main.js'),
-    contents = fs.readFileSync(mainFilePath, 'utf8'),
+    mainContents = fs.readFileSync(mainFilePath, 'utf8'),
     transformNoLog = require('../../build/transform-nolog'),
     args = process.argv.slice(2);
 
+var hasOwn = Object.prototype.hasOwnProperty;
+function hasProp(obj, prop) {
+    return hasOwn.call(obj, prop);
+}
+
+// Options passed to build command via CLI arguments, of the form name=value.
 var options = {};
 args.forEach(function(arg) {
   var pair = arg.split('=');
@@ -22,27 +28,79 @@ args.forEach(function(arg) {
   }
 });
 
-var transform = function(filePath, contents) {
-  return contents;
+/*
+../../../support/prim.js
+prim-to-promise.js
+../../../lifecycle.js
+../../../support/normalize-alias.js
+../../../support/normalize-dot.js
+../../../support/plugins.js
+fetch.js
+requirejs-to-amodro.js
+suffix.js
+ */
+
+// Permutations of the builds
+var permutations = {
+  // The default one used for running node tests by default.
+  'amodro-test-node': {
+  },
+
+  // The default one used for running node tests by default, with debug logging.
+  'amodro-test-node-debug': {
+    keepLog: true
+  },
+
+  // For browser with promise support, no requirejs compatibility, only script
+  // tag and worker support.
+  'amodro': {
+    '../../../support/prim.js': '',
+    'prim-to-promise.js': '',
+    'fetch.js': 'fetch/browser-script-worker.js',
+    'requirejs-to-amodro.js': '',
+    'suffix.js': ''
+  },
+
+  // For browser with promise support, no requirejs compatibility, only script
+  // tag and worker support. With debug logging.
+  'amodro-debug': {
+    keepLog: true,
+    '../../../support/prim.js': '',
+    'prim-to-promise.js': '',
+    'fetch.js': 'fetch/browser-script-worker.js',
+    'requirejs-to-amodro.js': '',
+    'suffix.js': ''
+  }
 };
 
-if (!options.log) {
-  transform = transformNoLog;
-}
+Object.keys(permutations).forEach(function(key) {
+  var mapping = permutations[key];
 
-contents = transform(mainFilePath, contents);
+  var transform = function(filePath, contents) {
+    return contents;
+  };
 
-var lifecycleContents;
-
-//Inline file contents
-contents = contents.replace(loadRegExp, function (match, fileName) {
-  var filePath = path.join(dir, fileName);
-  if (fileName.indexOf('lifecycle.js') !== -1) {
-    lifecycleContents = contents;
+  if (!mapping.keepLog) {
+    transform = transformNoLog;
   }
-  var text = transform(filePath, fs.readFileSync(filePath, 'utf8'));
-  return text;
-});
 
-// AMD loader
-fs.writeFileSync(path.join(__dirname, 'amodro-node.js'), contents, 'utf8');
+  var contents = transform(mainFilePath, mainContents);
+
+  //Inline file contents
+  contents = contents.replace(loadRegExp, function (match, fileName) {
+    if (hasProp(mapping, fileName)) {
+      fileName = mapping[fileName];
+      if (fileName === '') {
+        return '';
+      }
+    }
+
+    var filePath = path.join(dir, fileName);
+    var text = transform(filePath, fs.readFileSync(filePath, 'utf8'));
+    return text;
+  });
+
+  // Write the file.
+  var outPath = path.join(__dirname, key + '.js');
+  fs.writeFileSync(outPath, contents, 'utf8');
+});

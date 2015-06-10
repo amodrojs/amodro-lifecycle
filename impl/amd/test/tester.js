@@ -2,7 +2,9 @@
 /*global it, define: true */
 var assert = require('assert'),
     path = require('path'),
-    amodro = require('../amodro-node'),
+    logDebug = process.env.LOGDEBUG === '1',
+    amodro = require('../' +
+             (logDebug ? 'amodro-test-node-debug' : 'amodro-test-node')),
     createLoader = amodro.createLoader,
     define = amodro.define,
     sourceDir = path.join(__dirname, 'source');
