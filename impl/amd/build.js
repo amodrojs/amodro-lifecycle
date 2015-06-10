@@ -32,12 +32,17 @@ if (!options.log) {
 
 contents = transform(mainFilePath, contents);
 
+var lifecycleContents;
+
 //Inline file contents
 contents = contents.replace(loadRegExp, function (match, fileName) {
   var filePath = path.join(dir, fileName);
+  if (fileName.indexOf('lifecycle.js') !== -1) {
+    lifecycleContents = contents;
+  }
   var text = transform(filePath, fs.readFileSync(filePath, 'utf8'));
   return text;
 });
 
-//Set the isOpto flag to true
+// AMD loader
 fs.writeFileSync(path.join(__dirname, 'amodro-node.js'), contents, 'utf8');

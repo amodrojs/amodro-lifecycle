@@ -1,0 +1,10 @@
+/*jshint evil: true */
+/*global Promise: true */
+'use strict';
+var fs = require('fs'),
+    path = require('path');
+
+if (typeof Promise === 'undefined') {
+  var Promise = require('./support/prim');
+}
+

@@ -28,8 +28,18 @@ function Lifecycle(parent) {
 (function() {
   'use strict';
 
-  
-  
+  function log(msg) {
+    console.log(msg);
+  }
+
+  function fslog(fs, msg) {
+    var fsId = '[none]';
+    if (fs && fs.desc) {
+      fsId = '[' + fs.desc + ']';
+    }
+    return log(fsId + ' ' + msg);
+  }
+
   function evaluate(lifecycle, normalizedId, location, source) {
     /*jshint evil: true */
     eval(source);
@@ -118,7 +128,9 @@ function Lifecycle(parent) {
 
     setModule: function(normalizedId, value, isTemp) {
       if(!hasProp(this.instantiated, normalizedId)) {
-                this.modules[normalizedId] = value;
+        log('Setting module for ' + normalizedId + ': ' + value +
+            (isTemp ? ' [temporary]' : ''));
+        this.modules[normalizedId] = value;
         if (!isTemp) {
           this.instantiated[normalizedId] = true;
         }
@@ -141,12 +153,14 @@ function Lifecycle(parent) {
     useUnnormalized: function(id, refId, factorySequence) {
       var normalizedId;
 
-            // Top level use calls may be loader plugin resources, so ask for depend
+      fslog(factorySequence, 'useUnnormalized: ' + id + ', ' + refId);
+      // Top level use calls may be loader plugin resources, so ask for depend
       // hooks to determine if there are any other dependencies for the id
       // before proceeding.
       return ensurePromise(this.top.depend(refId, [id]))
       .then(function() {
-                try {
+        fslog(factorySequence, 'useUnnormalized.then: ' + id + ', ' + refId);
+        try {
           normalizedId = this.top.normalize(id, refId);
         } catch (e) {
           moduleError(id + ', ' + refId, e);
@@ -171,10 +185,13 @@ function Lifecycle(parent) {
       var instantiated = false;
 
       return Promise.resolve().then(function() {
-        
+        fslog(factorySequence, 'use: ' + normalizedId + ', ' + refId);
+
         // If already defined, just resturn the module.
         if (hasProp(this.instantiated, normalizedId)) {
-                    instantiated = true;
+          fslog(factorySequence, 'use: ' + normalizedId +
+                ' has module, returning');
+          instantiated = true;
           return;
         }
 
@@ -188,7 +205,9 @@ function Lifecycle(parent) {
             cycleDetected: {}
           });
 
-          
+          fslog(factorySequence, 'use: created factorySequence: ' +
+                normalizedId + ': ' + refId);
+
           // Indicate refId as already being in the factorySequence, so
           // if it shows up in execution sequence later, it is considered a
           // cycle.
@@ -221,7 +240,8 @@ function Lifecycle(parent) {
         }
 
         if (waiting) {
-                    return waiting;
+          fslog(factorySequence, 'use: returning waiting: ' + normalizedId);
+          return waiting;
         }
 
         // No waiting record, but could have a registered entry from a bulk
@@ -230,7 +250,9 @@ function Lifecycle(parent) {
         var record = this.getRegistered(normalizedId);
         if (record) {
           var registered = record.registered;
-                    return (record.instance.waiting[normalizedId] =
+          fslog(factorySequence, 'use: returning registered entry: ' +
+                normalizedId);
+          return (record.instance.waiting[normalizedId] =
             record.instance.callDepend(normalizedId,
                                        registered.deps,
                                        factorySequence));
@@ -238,7 +260,9 @@ function Lifecycle(parent) {
 
         // Not already waiting or in registry, needs to be fetched/loaded.
         var location = this.top.locate(normalizedId, 'js');
-                return this.top.load(normalizedId, location, factorySequence);
+        fslog(factorySequence, 'use: calling load: ' + normalizedId +
+              ', ' + location);
+        return this.top.load(normalizedId, location, factorySequence);
       }.bind(this))
       .then(function() {
         // If considered "instantiate" skip the dependency tracing for
@@ -261,7 +285,8 @@ function Lifecycle(parent) {
         }
       }.bind(this))
       .then(function() {
-        
+        fslog(factorySequence, 'use.then: ' + normalizedId);
+
         // If the ID was part of a factory sequence, indicate complete. It may
         // not be if the module was already in modules.
         if (factorySequence && !instantiated) {
@@ -269,7 +294,9 @@ function Lifecycle(parent) {
         }
         var value = this.getModule(normalizedId);
 
-                return value;
+        fslog(factorySequence, 'use.then returning module value: ' +
+              normalizedId + ': ' + value);
+        return value;
       }.bind(this));
     },
 
@@ -281,27 +308,38 @@ function Lifecycle(parent) {
      * @return {Promise}
      */
     load: function(normalizedId, location, factorySequence) {
-            return (this.waiting[normalizedId] =
+      fslog(factorySequence, 'load: calling fetch, setting waiting: ' +
+            normalizedId);
+      return (this.waiting[normalizedId] =
       ensurePromise(this.fetch(normalizedId, location))
       .then(function(source) {
-                
+        fslog(factorySequence, 'load.fetch.then: ' + normalizedId);
+        log(source);
+
         try {
           // Protect against fetch promise results being something like a
           // module value, in the case of plugins.
           if (typeof source === 'string' && source) {
             source = this.translate(normalizedId, location, source);
-                                  }
+            fslog(factorySequence, 'load.fetch.then called translate: ' +
+                  normalizedId);
+            log(source);
+          }
 
           // Some cases, like script tag-based loading, do not have source to
           // evaluate, hidden by browser security restrictions from seeing the
           // source.
           if (typeof source === 'string' && source) {
-                        this.evaluate(normalizedId, location, source);
+            fslog(factorySequence, 'load.fetch.then calling evaluate: ' +
+                  normalizedId);
+            this.evaluate(normalizedId, location, source);
           }
 
           var registered = getOwn(this.registry, normalizedId);
 
-          
+          fslog(factorySequence, 'load.fetch.then calling ' +
+                'callDepend: ' + normalizedId + ': ' + registered);
+
           return this.top.callDepend(normalizedId,
                                      registered.deps,
                                      factorySequence);
@@ -340,7 +378,8 @@ function Lifecycle(parent) {
 
         this.registry[normalizedId] = entry;
 
-              }
+        log('addToRegistry: ' + normalizedId + ': ' + deps);
+      }
     },
 
     /**
@@ -351,14 +390,17 @@ function Lifecycle(parent) {
      * @return {Promise}
      */
     callDepend: function(normalizedId, deps, factorySequence) {
-      
+      fslog(factorySequence, 'callDepend: ' + normalizedId + ', ' + deps);
+
       if (!deps || !deps.length) {
         return Promise.resolve([]);
       }
 
       return ensurePromise(this.depend(normalizedId, deps))
       .then(function(deps) {
-        
+        fslog(factorySequence, 'callDepend.then: ' + normalizedId +
+                               ', ' + deps);
+
         var normalizedDeps = deps.map(function(depId) {
           return this.normalize(depId, normalizedId);
         }.bind(this));
@@ -383,7 +425,9 @@ function Lifecycle(parent) {
     factorySequenceDepComplete: function(factorySequence) {
       factorySequence.depCount -= 1;
 
-      
+      fslog(factorySequence, 'factorySequenceDepComplete: ' +
+            factorySequence.depCount);
+
       if (factorySequence.depCount !== 0) {
         return;
       }
@@ -392,7 +436,8 @@ function Lifecycle(parent) {
       // in the right order, as according to depOrder.
       var order = factorySequence.depOrder;
 
-      
+      fslog(factorySequence, 'factorySequenceDepComplete order: ' + order);
+
       for (var i = 0; i < order.length; i++) {
         var depId = order[i],
             registeredEntry = this.getRegistered(depId);
