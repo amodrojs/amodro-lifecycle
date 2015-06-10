@@ -1,8 +1,4 @@
-* use a hasModule check instead of getModule, since module value could be correctly undefined?
-
 * plugin-delegated not working, wants to do delgated!r!a where r is aliased to refine. So, nested loader plugin use. Can this work?
-
-* try out parent/child relationship, make sure top is used for lifecycle hooks.
 
 ## plugins:
 
@@ -11,6 +7,7 @@
 
 ## parent/child loaders
 
+* Does it work?
 * For addToRegistry: does local definition win over outer one?
 
 ## amodro code
@@ -27,6 +24,7 @@
 
 
 ## API work
+
 * on() events?
 * undef?
 
