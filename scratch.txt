@@ -2,24 +2,7 @@
 
 * plugin-delegated not working, wants to do delgated!r!a where r is aliased to refine. So, nested loader plugin use. Can this work?
 
-* With no exports object defined get: Error: baz failed: TypeError: Cannot set property 'name' of undefined, but the trace is not usable. Perhaps instead of eval while in node, use vm, does that give good context?
-
 * try out parent/child relationship, make sure top is used for lifecycle hooks.
-
-* packages config support: just put in a register for the package name pointing to main module, then a paths config?
-* put in locations support from module as an override.
-* bundles config, goes in locate
-
-* inline-414 does not trigger the cycle detection message? Test passes, but
--> even if in modules, does not mean done, need to check if registry value? also
-implies cleanup up registry values when done?
-* clean up waiting also? Maybe that is the signal instead of registry? no should clean both.
-
-
-## config:
-
-* test alias config (also allow for map legacy name?
-
 
 ## plugins:
 
@@ -34,6 +17,9 @@ implies cleanup up registry values when done?
 
 * amodro.useXhr uses a simple extension test, but this might not work out for
   text!something.js requests?
+* amodro = {} config support?
+* data-serial data-parallel support?
+* waitSeconds support? Maybe not, rely on error pathways from fetches to distinguish? Or make it 0 by default.
 
 ## Difference with requirejs:
 
@@ -54,11 +40,3 @@ implies cleanup up registry values when done?
 * scrub the other config options, like waitSeconds
 * loader plugin API adapter?
 * paths fallback: done in fetch() implementation.
-
-
-------------
-
-
-function logFS(fs) {
-  return fs ? JSON.stringify(fs) : 'undefined';
-}

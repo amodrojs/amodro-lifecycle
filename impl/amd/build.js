@@ -70,6 +70,12 @@ var permutations = {
     'fetch.js': 'fetch/browser-script-worker.js',
     'requirejs-to-amodro.js': '',
     'suffix.js': ''
+  },
+
+  // Base amodro, with some requirejs api support and includes prim.
+  'amodro-requirejs-prim': {
+    'fetch.js': 'fetch/browser-script-worker.js',
+    'suffix.js': ''
   }
 };
 
