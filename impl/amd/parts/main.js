@@ -77,7 +77,7 @@ var amodro, define;
 
   // Lifecycle overrides and additional methods
   var protoMethods = {
-    // START overrides
+    // START lifecycle overrides
     cycleDetected: function(id, cycleOrder) {
       console.log('Cycle detected, \'' + id + '\' already in list: ' +
                   cycleOrder);
@@ -96,7 +96,6 @@ var amodro, define;
 
     locate: function(normalizedId, suggestedExtension) {
       // sync
-
       var location,
           normalizedLocations = this.config._normalizedLocations,
           bundleId = getOwn(this.config._bundlesMap, normalizedId),
@@ -150,7 +149,32 @@ var amodro, define;
 
     fetch: function(normalizedId, location) {
       // async
-      return amodro.fetch(normalizedId, location, this);
+      if (hasProp(this.fetchedLocations, location)) {
+        var value = this.fetchedLocations[location];
+        if (value === true) {
+          // Already fetched. Do not return a value in this case, as no new
+          // work, like translate and such, should be done. No explicit promise
+          // return here for optimiation reasons. Lifecycle ensures fetch
+          // response is a promise and if not, provides one.
+          this.execCompleted(normalizedId);
+          return;
+        } else {
+          return this.fetchedLocations[location].then(function(value) {
+            // Purposely do not return a value here as any translate work
+            // should only be handled by the very first call to fetch.
+            this.execCompleted(normalizedId);
+          });
+        }
+      } else {
+        return (this.fetchedLocations[location] =
+                amodro.fetch(normalizedId, location, this)
+                .then(function (value) {
+                  // Clear the promise to release holding on to possibly large
+                  // fetched values, but still indicate the fetch was done.
+                  this.fetchedLocations[location] = true;
+                  return value;
+                }.bind(this)));
+      }
     },
 
     translate: function(normalizedId, location, source) {
@@ -210,7 +234,7 @@ var amodro, define;
         return ret;
       }
     },
-    // END overrides
+    // END lifecycle overrides
 
     getDep: function(normalizedId, dep, throwOnMiss) {
       var reg = this.registry[normalizedId];
@@ -396,6 +420,9 @@ var amodro, define;
       _normalizedLocations: {},
       _bundlesMap: {}
     };
+
+    // Stores promises for fetches already in progress, keyed by location.
+    this.fetchedLocations = {};
 
     // Seed entries for special dependencies so they are not requested by
     // lifecycle.

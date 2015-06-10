@@ -30,6 +30,11 @@ implies cleanup up registry values when done?
 
 * For addToRegistry: does local definition win over outer one?
 
+## amodro code
+
+* amodro.useXhr uses a simple extension test, but this might not work out for
+  text!something.js requests?
+
 ## Difference with requirejs:
 
 * plugin API is different.
@@ -38,7 +43,6 @@ implies cleanup up registry values when done?
 ## API work
 * on() events?
 * undef?
-
 
 # requirejs adapter
 

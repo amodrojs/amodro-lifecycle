@@ -1,14 +1,12 @@
 /*jshint strict: false, browser: true */
 /*global amodro, importScripts */
 
-//TODO: Track URLs fetched in an urlFetched object, and if already in
-//progress, use the promise stored in urlFetched instead.
-
 amodro.createXhr = function(normalizedId, location, responseType) {
   return new XMLHttpRequest();
 };
 
-// Only use XHR calls for non .js files.
+// Only use XHR calls for non .js files. This might need to be revisited if
+// for example a text! plugin asks for a .js file?
 amodro.useXhr = function(normalizedId, location) {
   return !/\.js$/.test(location);
 };
