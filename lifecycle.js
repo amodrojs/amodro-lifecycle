@@ -31,6 +31,7 @@ function Lifecycle(parent) {
   }
 
   function evaluate(lifecycle, normalizedId, location, source) {
+    debugger;
     /*jshint evil: true */
     eval(source);
   }

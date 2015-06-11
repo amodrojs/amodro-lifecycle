@@ -2,7 +2,17 @@
 /*global amodro, require: true, requirejs: true */
 var require, requirejs;
 (function() {
-  var jsSuffixRegExp = /\.js$/;
+  var jsSuffixRegExp = /\.js$/,
+      skipDataMain = false;
+
+  var oldConfig = amodro.config;
+  amodro.config = function(cfg) {
+    if (cfg.skipDataMain) {
+      skipDataMain = true;
+    }
+
+    return oldConfig.call(amodro, cfg);
+  };
 
   var req = function(deps, callback, errback, alt) {
     var config;
@@ -50,7 +60,8 @@ var require, requirejs;
     amodro.config(bootstrapConfig);
   }
 
-  if (typeof document !== 'undefined' && document.querySelector) {
+  if (!skipDataMain &&
+      typeof document !== 'undefined' && document.querySelector) {
     var dataMain = document.querySelector('script[data-main]');
     dataMain = dataMain && dataMain.getAttribute('data-main');
     if (dataMain) {

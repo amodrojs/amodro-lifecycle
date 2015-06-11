@@ -22,5 +22,22 @@ Lifecycle.prototype.configure = function(cfg) {
     });
   }
 
-  return oldConfigure.call(this, cfg);
+  var result = oldConfigure.call(this, cfg);
+
+  if (cfg.deps) {
+    this.require(cfg.deps, cfg.callback);
+  }
+
+  return result;
+};
+
+var oldLocate = Lifecycle.prototype.locate;
+Lifecycle.prototype.locate = function(normalizedId, suggestedExtension) {
+  var location = oldLocate.call(this, normalizedId, suggestedExtension);
+  if (location.indexOf('data:') !== 0) {
+    location = this.config.urlArgs ? location +
+                                  ((location.indexOf('?') === -1 ? '?' : '&') +
+                                   this.config.urlArgs) : location;
+  }
+  return location;
 };
