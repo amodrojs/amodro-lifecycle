@@ -474,6 +474,9 @@ var amodro, define;
     define = function() {
       defineQueue.push(slice.call(arguments));
     };
+    define.amd = {
+      jQuery: true
+    };
   }
 
   function createLoader(config, id) {

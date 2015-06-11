@@ -17,6 +17,10 @@ var require, requirejs;
   var req = function(deps, callback, errback, alt) {
     var config;
 
+    if (typeof deps === 'string') {
+      return amodro(deps);
+    }
+
     if (!Array.isArray(deps)) {
       config = deps;
       deps = callback;
