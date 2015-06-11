@@ -1,15 +1,10 @@
-/*global Lifecycle, dotNormalize, normalizeAlias, addPluginSupport,
-         define: true */
+/*global Lifecycle, dotNormalize, normalizeAlias, define: true */
 /*jshint strict: false */
 var amodro, define;
-(function() {
+(function(global) {
   //INSERT ../../../support/prim.js
   //INSERT prim-to-promise.js
   //INSERT ../../../lifecycle.js
-  //INSERT ../../../support/normalize-alias.js
-  //INSERT ../../../support/normalize-dot.js
-  //INSERT ../../../support/plugins.js
-
 
   var slice = Array.prototype.slice,
       commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
@@ -98,6 +93,15 @@ var amodro, define;
     return require;
   }
 
+  // Basic ID normalization support, and alias support.
+  //INSERT ../../../support/normalize-alias.js
+  //INSERT ../../../support/normalize-dot.js
+
+  // Optional parts that can further modify the lifecycle prototypes.
+  var protoModifiers = [];
+  //INSERT ../../../support/plugins.js
+  //INSERT ../../../support/shim.js
+
   // Lifecycle overrides and additional methods
   var protoMethods = {
     // START lifecycle overrides
@@ -115,8 +119,9 @@ var amodro, define;
       if (this.config.nodeIdCompat) {
         id = id.replace(jsSuffixRegExp, '');
       }
+      // dotNormalize comes from the normalize-alias.js provider.
       var idParts = dotNormalize(id, refId, true);
-      if (this.config.alias) {
+      if (this.config.alias && typeof normalizeAlias !== 'undefined') {
         return normalizeAlias(idParts, (refId ? refId.split('/') : []),
                               this.config);
       } else {
@@ -436,10 +441,12 @@ var amodro, define;
     Lifecycle.prototype[key] = protoMethods[key];
   });
 
-  // Mix in plugin support. Do this AFTER setting up baseline lifecycle methods,
-  // since the plugin support will delegate to those captured methods after
-  // detecting if plugins should be used.
-  addPluginSupport(Lifecycle);
+  // Mix in other modifiers, like plugin support. Do this AFTER setting up
+  // baseline lifecycle methods, these modifieres will want to delegate to those
+  // captured methods after detecting if plugins should be used.
+  protoModifiers.forEach(function(modify) {
+    modify(Lifecycle);
+  });
 
   var loaderInstanceCounter = 0;
 
@@ -532,7 +539,7 @@ var amodro, define;
   }
 
 
-}());
+}(this));
 
 // Done outside the closure to limit eval seeing closure contents.
 if (!amodro.evaluate) {

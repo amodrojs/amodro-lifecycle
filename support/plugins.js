@@ -1,5 +1,5 @@
-/*global hasProp, getOwn, makeRequire */
-function addPluginSupport(Lifecycle) {
+/*global protoModifiers, hasProp, getOwn, makeRequire */
+protoModifiers.push(function (Lifecycle) {
   'use strict';
 
   var slice = Array.prototype.slice,
@@ -204,4 +204,4 @@ function addPluginSupport(Lifecycle) {
   Object.keys(protoMethods).forEach(function(key) {
     proto[key] = protoMethods[key];
   });
-}
+});
