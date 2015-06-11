@@ -37,6 +37,8 @@ var require, requirejs;
   req.defined = amodro.defined;
   req.specified = amodro.specified;
   req.config = amodro.config;
+  req.isBrowser = typeof document !== 'undefined' &&
+                  typeof navigator !== 'undefined';
 
   var bootstrapConfig;
 

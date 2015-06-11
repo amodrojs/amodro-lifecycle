@@ -1,5 +1,5 @@
 /*jshint strict: false */
-/*global Lifecycle */
+/*global Lifecycle, jsSuffixRegExp */
 var oldConfigure = Lifecycle.prototype.configure;
 
 Lifecycle.prototype.configure = function(cfg) {
@@ -14,10 +14,12 @@ Lifecycle.prototype.configure = function(cfg) {
 
     cfg.packages.forEach(function(pkg) {
       if (typeof pkg === 'string') {
-        locations[pkg] = pkg + '{main}';
+        locations[pkg + '{main}'] = pkg;
       } else {
-        locations[pkg.name] = (pkg.location || pkg.name) +
-                              '{' + (pkg.main || 'main') + '}';
+        var mainValue = '{' +
+                        (pkg.main || 'main').replace(jsSuffixRegExp, '') +
+                        '}';
+        locations[pkg.name + mainValue] = (pkg.location || pkg.name);
       }
     });
   }

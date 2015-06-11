@@ -14,6 +14,7 @@ var amodro, define;
   var slice = Array.prototype.slice,
       commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
       cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
+      jsSuffixRegExp = /\.js$/,
       hasProp = Lifecycle.hasProp,
       getOwn = Lifecycle.getOwn;
 
@@ -48,6 +49,11 @@ var amodro, define;
       }
 
       var p = Promise.all(deps.map(function(dep) {
+        // If a require([]) call asks for require, just give back this
+        // function, since it is a context-specific dependency.
+        if (dep === 'require') {
+          return require;
+        }
         return instance.useUnnormalized(dep, refId);
       }));
 
@@ -96,6 +102,9 @@ var amodro, define;
 
     normalize: function(id, refId) {
       // sync
+      if (this.config.nodeIdCompat) {
+        id = id.replace(jsSuffixRegExp, '');
+      }
       var idParts = dotNormalize(id, refId, true);
       if (this.config.alias) {
         return normalizeAlias(idParts, (refId ? refId.split('/') : []),
@@ -384,7 +393,7 @@ var amodro, define;
                 factory: function(m) { return m; }
               };
             }
-          });
+          }.bind(this));
         } else if (key === 'baseUrl') {
           var baseUrl = cfg.baseUrl;
           if (baseUrl.charAt(baseUrl.length - 1) !== '/') {
