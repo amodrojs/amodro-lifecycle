@@ -3,7 +3,8 @@
 var require, requirejs;
 (function() {
   var jsSuffixRegExp = /\.js$/,
-      skipDataMain = false;
+      skipDataMain = false,
+      contexts = {};
 
   var oldConfig = amodro.config;
   amodro.config = function(cfg) {
@@ -28,19 +29,35 @@ var require, requirejs;
       errback = alt;
     }
 
+    var instance = amodro;
     if (config) {
-      amodro.config(config);
+      var context = config.context;
+      if (context) {
+        if (contexts.hasOwnProperty(context)) {
+          instance = contexts[context];
+        } else {
+          instance = contexts[context] = amodro.createLoader();
+        }
+      }
+      instance.config(config);
     }
 
-    return amodro(deps, callback, errback).catch(function(err) {
-      console.error(err);
-    });
+    if (deps) {
+      instance(deps, callback, errback).catch(function(err) {
+        console.error(err);
+      });
+    }
+
+    return instance;
   };
 
   req.toUrl = amodro.toUrl;
   req.defined = amodro.defined;
   req.specified = amodro.specified;
-  req.config = amodro.config;
+  req.config = function(cfg) {
+    amodro.config(cfg);
+    return req;
+  };
   req.isBrowser = typeof document !== 'undefined' &&
                   typeof navigator !== 'undefined';
 

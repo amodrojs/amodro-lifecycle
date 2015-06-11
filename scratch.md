@@ -27,6 +27,12 @@
 
 * edit simple.html to not ask for URLs and remove moreSimpleTests = true.
 * toUrl-tests.js: no ../bower_components resolution because outside ID space.
+* multiversion.html: change these deps since URLs not supported:
+  * version1/gamma.js -> gamma
+  * version2/epsilon.js -> epsilon
+* comment out isBrowser/isBrowser.html in all.js, isBrowser on local require not
+  supported any more.
+* comment out onResourceLoad/nestedRequire.html, require.onResourceLoad not supported.
 
 
 ## API work
