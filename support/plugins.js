@@ -40,6 +40,11 @@ function addPluginSupport(Lifecycle) {
               resolve();
             }.bind(this);
             onload.error = reject;
+            onload.fromText = function(text) {
+              // In this case want the text to participate in transform
+              // and parsing.
+              resolve(text);
+            };
 
             plugin.load(pluginDesc.resourceId,
                         makeRequire(this, pluginDesc.id),

@@ -193,7 +193,7 @@ var amodro, define;
             // Purposely do not return a value here as any translate work
             // should only be handled by the very first call to fetch.
             this.execCompleted(normalizedId);
-          });
+          }.bind(this));
         }
       } else {
         return (this.fetchedLocations[location] =
