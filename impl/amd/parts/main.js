@@ -18,6 +18,12 @@ var amodro, define;
       hasProp = Lifecycle.hasProp,
       getOwn = Lifecycle.getOwn;
 
+  var specialDeps = {
+    require: true,
+    exports: true,
+    module: true
+  };
+
   function deepMix(dest, source) {
     Object.keys(source).forEach(function(prop) {
       var value = source[prop];
@@ -95,8 +101,12 @@ var amodro, define;
   // Lifecycle overrides and additional methods
   var protoMethods = {
     // START lifecycle overrides
-    cycleDetected: function(id, cycleOrder) {
-      console.log('Cycle detected, \'' + id + '\' already in list: ' +
+    isSpecialDep: function(normalizedId) {
+      return hasProp(specialDeps, normalizedId);
+    },
+
+    cycleDetected: function(normalizedId, cycleOrder) {
+      console.log('Cycle detected, \'' + normalizedId + '\' already in list: ' +
                   cycleOrder);
     },
 
@@ -469,7 +479,12 @@ var amodro, define;
   function createLoader(config, id) {
     var lifecycle = new LoaderLifecyle(id);
     var loader = makeRequire(lifecycle);
+
     lifecycle.require = loader;
+
+    // Make it visible just for debugging purposes.
+    loader._lifecycle = lifecycle;
+
     loader.config = function(cfg) {
       lifecycle.configure(cfg);
     };

@@ -78,6 +78,12 @@ var permutations = {
   'amodro-requirejs-prim': {
     'fetch.js': 'fetch/browser-script-worker.js',
     'suffix.js': 'suffix/requirejs-to-amodro.js'
+  },
+  // Same as aboev, but with debug logs
+  'amodro-requirejs-prim-debug': {
+    keepLog: true,
+    'fetch.js': 'fetch/browser-script-worker.js',
+    'suffix.js': 'suffix/requirejs-to-amodro.js'
   }
 };
 
