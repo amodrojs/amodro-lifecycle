@@ -107,7 +107,7 @@ protoModifiers.push(function (Lifecycle) {
       var bundleId = this.config._bundlesMap &&
                      getOwn(this.config._bundlesMap, normalizedId);
 
-      if (bundleId) {
+      if (bundleId && bundleId !== normalizedId) {
         return oldMethods.locate.call(this, bundleId, suggestedExtension);
       }
 

@@ -27,6 +27,10 @@
 
 ## Differences with requirejs tests:
 
+TODO:
+* secondLateConfigPlugin/secondLateConfigPlugin.html: need to figure out why
+  it fails.
+
 * edit simple.html to not ask for URLs and remove moreSimpleTests = true.
 * toUrl-tests.js: no ../bower_components resolution because outside ID space.
 * multiversion.html: change these deps since URLs not supported:

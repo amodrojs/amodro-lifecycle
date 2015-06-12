@@ -137,7 +137,7 @@ var amodro, define;
           segment = normalizedId,
           firstPass = true;
 
-      if (bundleId) {
+      if (bundleId && bundleId !== normalizedId) {
         return this.locate(bundleId, suggestedExtension);
       }
 
