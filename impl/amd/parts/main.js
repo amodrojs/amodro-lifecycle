@@ -457,27 +457,42 @@ var amodro, define;
     }
   };
 
+  var lcProto = Lifecycle.prototype;
+
   Object.keys(protoMethods).forEach(function(key) {
-    Lifecycle.prototype[key] = protoMethods[key];
+    lcProto[key] = protoMethods[key];
   });
 
   // Mix in other modifiers, like plugin support. Do this AFTER setting up
   // baseline lifecycle methods, these modifieres will want to delegate to those
   // captured methods after detecting if plugins should be used.
   protoModifiers.forEach(function(modify) {
-    modify(Lifecycle.prototype);
+    modify(lcProto);
   });
 
 
   // Override the .use to provide error retry capability.
-  var oldUse = Lifecycle.prototype.use;
-  Lifecycle.prototype.use = function(normalizedId, refId, factoryTree) {
+  var oldUse =lcProto.use;
+  lcProto.use = function(normalizedId, refId, factoryTree) {
     return oldUse.apply(this, arguments).catch(function (err) {
       if (this.handleUseError) {
         return this.handleUseError(err, normalizedId, refId, factoryTree);
       }
       throw err;
     }.bind(this));
+  };
+
+  // Override removeModule to also clear waiting define queue of a matching
+  // module.
+  var oldRemoveModule = lcProto.removeModule;
+  lcProto.removeModule = function(normalizedId) {
+    oldRemoveModule.apply(this, arguments);
+    defineQueue.some(function(item, i) {
+      if (item[0] === normalizedId) {
+        defineQueue.splice(i, 1);
+        return true;
+      }
+    });
   };
 
   var loaderInstanceCounter = 0;
@@ -511,7 +526,7 @@ var amodro, define;
     this.setModule('module', {});
   }
 
-  LoaderLifecyle.prototype = Lifecycle.prototype;
+  LoaderLifecyle.prototype = lcProto;
 
   // Allow other modifications to the LoaderLifecycle prototype based on build
   // and environment needs.

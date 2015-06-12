@@ -193,7 +193,7 @@ function Lifecycle(parent) {
     removeModule: function(normalizedId) {
       if (hasProp(this.modules, normalizedId) ||
           hasProp(this.waiting, normalizedId) ||
-          hasProp(this.registered, normalizedId)) {
+          hasProp(this.registry, normalizedId)) {
         this.removeRegistered(normalizedId);
         this.removeWaiting(normalizedId);
         delete this.modules[normalizedId];
