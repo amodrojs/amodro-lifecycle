@@ -186,7 +186,7 @@ var amodro, define;
                   location.match(/^[\w\+\.\-]+:/) ?
                   '' : this.config.baseUrl) + location;
 
-      if (suggestedExtension && location.indexOf('data:') !== 0) {
+      if (suggestedExtension && !/^data\:|\?/.test(location)) {
         location += '.' + suggestedExtension;
       }
 
