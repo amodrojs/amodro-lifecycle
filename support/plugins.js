@@ -137,6 +137,15 @@ protoModifiers.push(function (Lifecycle) {
   proto.fetch = function(normalizedId, location) {
     var pluginDesc = this.getPluginDesc(normalizedId);
     if (pluginDesc) {
+
+      // Allow for the full plugin ID to be in a bundle.
+      var bundleId = this.config._bundlesMap &&
+                     getOwn(this.config._bundlesMap, normalizedId);
+
+      if (bundleId && bundleId !== normalizedId) {
+        return oldMethods.fetch.call(this, bundleId, location);
+      }
+
       var plugin = pluginDesc.plugin,
           resourceId = pluginDesc.resourceId;
 
