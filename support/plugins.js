@@ -1,9 +1,8 @@
 /*global protoModifiers, hasProp, getOwn, makeRequire */
-protoModifiers.push(function (Lifecycle) {
+protoModifiers.push(function (proto) {
   'use strict';
 
   var slice = Array.prototype.slice,
-      proto = Lifecycle.prototype,
       oldMethods = {},
       methods = ['normalize', 'locate', 'fetch', 'translate',
                  'depend', 'instantiate'],
@@ -111,7 +110,10 @@ protoModifiers.push(function (Lifecycle) {
   };
 
   proto.locate = function(normalizedId, suggestedExtension) {
-    var pluginDesc = this.getPluginDesc(normalizedId);
+    var location,
+        ignoreJsForScript = false,
+        pluginDesc = this.getPluginDesc(normalizedId);
+
     if (pluginDesc) {
       if (!pluginDesc.id) {
         // The badly formed '!something' case.
@@ -122,31 +124,42 @@ protoModifiers.push(function (Lifecycle) {
                        getOwn(this.config._bundlesMap, normalizedId);
 
         if (bundleId && bundleId !== normalizedId) {
-          return oldMethods.locate.call(this, bundleId, suggestedExtension);
-        }
-
-        var plugin = pluginDesc.plugin,
-            resourceId = pluginDesc.resourceId;
-        if (plugin) {
-          if (plugin.locate) {
-            return plugin.locate(this.getPluginProxy(),
-                                 normalizedId, suggestedExtension);
-          } else if (hasProp(plugin, 'locateExtension')) {
-            return oldMethods.locate.call(this,
-                                          resourceId,
-                                          plugin.locateExtension);
-          } else if (plugin.locateDetectExtension) {
-            var index = resourceId.lastIndexOf('.');
-            if (index !== -1) {
-              return oldMethods.locate.call(this,
-                                            resourceId.substring(0, index),
-                                            resourceId.substring(index + 1));
+          location = oldMethods.locate.call(this, bundleId, suggestedExtension);
+        } else {
+          var plugin = pluginDesc.plugin,
+              resourceId = pluginDesc.resourceId;
+          if (plugin) {
+            if (plugin.locate) {
+              location = plugin.locate(this.getPluginProxy(),
+                                      normalizedId, suggestedExtension);
+            } else if (hasProp(plugin, 'locateExtension')) {
+              suggestedExtension = plugin.locateExtension;
+              location = oldMethods.locate.call(this,
+                                                resourceId,
+                                                suggestedExtension);
+            } else if (plugin.locateDetectExtension) {
+              ignoreJsForScript = true;
+              var index = resourceId.lastIndexOf('.');
+              if (index !== -1) {
+                location = oldMethods.locate.call(this,
+                                              resourceId.substring(0, index),
+                                              resourceId.substring(index + 1));
+              }
             }
           }
         }
       }
     }
-    return oldMethods.locate.call(this, normalizedId, suggestedExtension);
+
+    if (!location) {
+      location = oldMethods.locate.call(this, normalizedId, suggestedExtension);
+    }
+
+    if (suggestedExtension === 'js' && !ignoreJsForScript) {
+      this.isScriptLocation[location] = true;
+    }
+
+    return location;
   };
 
   proto.fetch = function(normalizedId, refId, location) {

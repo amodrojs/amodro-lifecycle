@@ -47,9 +47,11 @@ TODO:
   supported any more.
 * comment out onResourceLoad/nestedRequire.html, require.onResourceLoad not supported.
 * paths/paths.html change data-requiremodule to data-amodromodule
+* queryPath.html: change data-requiremodule to data-amodromodule
 * plugins/pluginShim/pluginShim.html: disabled, since it is a loader plugin that uses define, but also has a shim config. Should not support, choose either one or the other: define or shim.
 * jsonp.html: put in paths change for user: "https://api.github.com/users/jrburke?callback=define", no direct URL loading supported.
-
+* Disable relative/outsideBaseUrl/a/outsideBaseUrl.html, outside module ID space.
+* Disable remoteUrls/remoteUrls.html, module outside ID space.
 
 ## API work
 

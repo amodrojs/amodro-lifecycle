@@ -1,7 +1,5 @@
 /*global protoModifiers, hasProp, global */
-protoModifiers.push(function (Lifecycle) {
-  var proto = Lifecycle.prototype;
-
+protoModifiers.push(function (proto) {
   //Allow getting a global that expressed in
   //dot notation, like 'a.b.c'.
   function getGlobal(value) {

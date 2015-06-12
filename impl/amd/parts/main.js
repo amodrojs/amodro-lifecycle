@@ -190,6 +190,10 @@ var amodro, define;
         location += '.' + suggestedExtension;
       }
 
+      if (suggestedExtension === 'js') {
+        this.isScriptLocation[location] = true;
+      }
+
       return location;
     },
 
@@ -213,7 +217,7 @@ var amodro, define;
         }
       } else {
         return (this.fetchedLocations[location] =
-                amodro.fetch(normalizedId, refId, location, this)
+                this.amodroFetch(normalizedId, refId, location)
                 .then(function (value) {
                   // Clear the promise to release holding on to possibly large
                   // fetched values, but still indicate the fetch was done.
@@ -458,7 +462,7 @@ var amodro, define;
   // baseline lifecycle methods, these modifieres will want to delegate to those
   // captured methods after detecting if plugins should be used.
   protoModifiers.forEach(function(modify) {
-    modify(Lifecycle);
+    modify(Lifecycle.prototype);
   });
 
   var loaderInstanceCounter = 0;
@@ -475,6 +479,13 @@ var amodro, define;
       _bundlesMap: {}
     };
 
+    // Tracks if a script tag should be used for a given location. This is only
+    // needed because of the traditional script rules in the browser and wanting
+    // to avoid issues with CORS and CSP. In a browser-native module loader,
+    // this would not be needed as it should have better solutions for those
+    // cases.
+    this.isScriptLocation = {};
+
     // Stores promises for fetches already in progress, keyed by location.
     this.fetchedLocations = {};
 
@@ -486,6 +497,14 @@ var amodro, define;
   }
 
   LoaderLifecyle.prototype = Lifecycle.prototype;
+
+  // Allow other modifications to the LoaderLifecycle prototype based on build
+  // and environment needs.
+  var llProtoModifiers = [];
+  //INSERT fetch.js
+  llProtoModifiers.forEach(function(modify) {
+    modify(LoaderLifecyle.prototype);
+  });
 
   // Set up define() infrastructure. It just holds on to define calls until a
   // loader instance claims them via execCompleted.
@@ -545,8 +564,6 @@ var amodro, define;
 
       return deps;
     };
-
-    //INSERT fetch.js
 
     //INSERT requirejs-to-amodro.js
   }

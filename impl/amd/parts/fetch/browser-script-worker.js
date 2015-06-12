@@ -1,91 +1,93 @@
 /*jshint strict: false, browser: true */
-/*global amodro, importScripts */
+/*global llProtoModifiers, importScripts, hasProp */
+llProtoModifiers.push(function (proto) {
 
-amodro.createXhr = function(normalizedId, location, responseType) {
-  return new XMLHttpRequest();
-};
+  proto.createXhr = function(normalizedId, location, responseType) {
+    return new XMLHttpRequest();
+  };
 
-// Only use XHR calls for non .js files. This might need to be revisited if
-// for example a text! plugin asks for a .js file?
-amodro.useXhr = function(normalizedId, location) {
-  return !/\.js$/.test(location);
-};
+  proto.useScript = function(normalizedId, refId, location) {
+    return hasProp(this.isScriptLocation, location);
+  };
 
-amodro.xhrFetch = function(normalizedId, refId, location, responseType) {
-  return new Promise(function(resolve, reject) {
-    var xhr = amodro.createXhr(normalizedId, location, responseType);
-    if (responseType) {
-      xhr.responseType = responseType;
-    }
-
-    xhr.open('GET', location, true);
-
-    xhr.onreadystatechange = function (evt) {
-        var status, err;
-        //Do not explicitly handle errors, those should be
-        //visible via console output in the browser.
-        if (xhr.readyState === 4) {
-            status = xhr.status;
-            if (status > 399 && status < 600) {
-                //An http 4xx or 5xx error. Signal an error.
-                err = new Error(location + ' HTTP status: ' + status);
-                err.xhr = xhr;
-                reject(err);
-            } else {
-                resolve(responseType ? xhr.response : xhr.responseText);
-            }
-        }
-    };
-    xhr.send(null);
-  });
-};
-
-if (typeof importScripts === 'function') {
-
-  amodro.scriptFetch = function(normalizedId, refId, location, lifecycle) {
+  proto.xhrFetch = function(normalizedId, refId, location, responseType) {
     return new Promise(function(resolve, reject) {
-      try {
-        importScripts(location);
-      } catch (e) {
-        reject(e);
+      var xhr = this.createXhr(normalizedId, location, responseType);
+      if (responseType) {
+        xhr.responseType = responseType;
       }
-      lifecycle.execCompleted(normalizedId);
-      resolve();
-    });
+
+      xhr.open('GET', location, true);
+
+      xhr.onreadystatechange = function (evt) {
+          var status, err;
+          //Do not explicitly handle errors, those should be
+          //visible via console output in the browser.
+          if (xhr.readyState === 4) {
+              status = xhr.status;
+              if (status > 399 && status < 600) {
+                  //An http 4xx or 5xx error. Signal an error.
+                  err = new Error(location + ' HTTP status: ' + status);
+                  err.xhr = xhr;
+                  reject(err);
+              } else {
+                  resolve(responseType ? xhr.response : xhr.responseText);
+              }
+          }
+      };
+      xhr.send(null);
+    }.bind(this));
   };
 
-} else {
+  if (typeof importScripts === 'function') {
 
-  amodro.scriptFetch = function(normalizedId, refId, location, lifecycle) {
-    return new Promise(function(resolve, reject) {
-      var script = document.createElement('script');
-      script.setAttribute('data-amodromodule', normalizedId);
-      script.type = amodro.scriptType || 'text/javascript';
-      script.charset = 'utf-8';
-      script.async = true;
-
-      script.addEventListener('load', function () {
-          lifecycle.execCompleted(normalizedId);
-          resolve();
-      }, false);
-      script.addEventListener('error', function (err) {
-          var e = new Error('Load failed: ' + normalizedId + ': ' + script.src);
-          e.moduleId = normalizedId;
+    proto.scriptFetch = function(normalizedId, refId, location) {
+      return new Promise(function(resolve, reject) {
+        try {
+          importScripts(location);
+        } catch (e) {
           reject(e);
-      }, false);
+        }
+        this.execCompleted(normalizedId);
+        resolve();
+      }.bind(this));
+    };
 
-      script.src = location;
-
-      document.head.appendChild(script);
-    });
-  };
-
-}
-
-amodro.fetch = function(normalizedId, refId, location, lifecycle) {
-  if (amodro.useXhr(normalizedId, location)) {
-    return amodro.xhrFetch(normalizedId, refId, location);
   } else {
-    return amodro.scriptFetch(normalizedId, refId, location, lifecycle);
+
+    proto.scriptFetch = function(normalizedId, refId, location) {
+      return new Promise(function(resolve, reject) {
+        var script = document.createElement('script');
+        script.setAttribute('data-amodromodule', normalizedId);
+        script.type = this.config.scriptType || 'text/javascript';
+        script.charset = 'utf-8';
+        script.async = true;
+
+        script.addEventListener('load', function () {
+            this.execCompleted(normalizedId);
+            resolve();
+        }.bind(this), false);
+        script.addEventListener('error', function (err) {
+            var e = new Error('Load failed: ' + normalizedId +
+                              ': ' + script.src);
+            e.moduleId = normalizedId;
+            reject(e);
+        }, false);
+
+        script.src = location;
+
+        document.head.appendChild(script);
+      }.bind(this));
+    };
+
   }
-};
+
+  proto.amodroFetch = function(normalizedId, refId, location) {
+    if (this.useScript(normalizedId, refId, location)) {
+      return this.scriptFetch(normalizedId, refId, location);
+    } else {
+      return this.xhrFetch(normalizedId, refId, location);
+    }
+  };
+});
+
