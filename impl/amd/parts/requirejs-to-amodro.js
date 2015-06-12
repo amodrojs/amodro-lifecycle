@@ -1,5 +1,5 @@
 /*jshint strict: false */
-/*global Lifecycle, jsSuffixRegExp */
+/*global amodro, requirejs, Lifecycle, jsSuffixRegExp */
 var oldConfigure = Lifecycle.prototype.configure;
 
 Lifecycle.prototype.configure = function(cfg) {
@@ -43,3 +43,21 @@ Lifecycle.prototype.locate = function(normalizedId, suggestedExtension) {
   }
   return location;
 };
+
+
+amodro._onRequirejsDefined = function(requirejs) {
+  requirejs.undef = function(normalizedId) {
+    amodro._lifecycle.removeModule(normalizedId);
+  };
+
+  var proto = Lifecycle.prototype;
+  proto.handleUseError = function(error, normalizedId, refId, factoryTree) {
+    if (requirejs.onError) {
+      // Construct error object to match old requirejs style.
+      error.requireModules = [normalizedId];
+      return requirejs.onError(error);
+    }
+    throw error;
+  };
+};
+

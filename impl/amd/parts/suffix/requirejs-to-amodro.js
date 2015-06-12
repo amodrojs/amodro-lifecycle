@@ -61,6 +61,8 @@ var require, requirejs;
   req.isBrowser = typeof document !== 'undefined' &&
                   typeof navigator !== 'undefined';
 
+  amodro._onRequirejsDefined(req);
+
   var bootstrapConfig;
 
   var type = typeof require;
@@ -105,6 +107,4 @@ var require, requirejs;
       amodro([dataMain]);
     }
   }
-
-
 }());

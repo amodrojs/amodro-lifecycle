@@ -468,6 +468,18 @@ var amodro, define;
     modify(Lifecycle.prototype);
   });
 
+
+  // Override the .use to provide error retry capability.
+  var oldUse = Lifecycle.prototype.use;
+  Lifecycle.prototype.use = function(normalizedId, refId, factoryTree) {
+    return oldUse.apply(this, arguments).catch(function (err) {
+      if (this.handleUseError) {
+        return this.handleUseError(err, normalizedId, refId, factoryTree);
+      }
+      throw err;
+    }.bind(this));
+  };
+
   var loaderInstanceCounter = 0;
 
   function LoaderLifecyle(id) {

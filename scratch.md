@@ -38,6 +38,8 @@ TODO:
   it fails.
 * plugins/pluginNormalize/pluginNormalize.html: the plugA!plugB! case?
 
+Changes:
+
 * edit simple.html to not ask for URLs and remove moreSimpleTests = true.
 * toUrl-tests.js: no ../bower_components resolution because outside ID space.
 * multiversion.html: change these deps since URLs not supported:
@@ -52,6 +54,21 @@ TODO:
 * jsonp.html: put in paths change for user: "https://api.github.com/users/jrburke?callback=define", no direct URL loading supported.
 * Disable relative/outsideBaseUrl/a/outsideBaseUrl.html, outside module ID space.
 * Disable remoteUrls/remoteUrls.html, module outside ID space.
+
+For undef tests, the requirejs.onError needs to return a promise that will
+resolve to new module value. Example from undef.html test:
+
+    return new Promise(function(resolve, reject) {
+        requirejs(['dep'], function (dep) {
+            resolve(dep);
+            doh.is("real", dep.name);
+            done();
+            return dep;
+        }, function(err) {
+            reject(err);
+        });
+    });
+
 
 ## API work
 

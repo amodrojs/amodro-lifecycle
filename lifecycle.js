@@ -190,6 +190,19 @@ function Lifecycle(parent) {
       return value;
     },
 
+    removeModule: function(normalizedId) {
+      if (hasProp(this.modules, normalizedId) ||
+          hasProp(this.waiting, normalizedId) ||
+          hasProp(this.registered, normalizedId)) {
+        this.removeRegistered(normalizedId);
+        this.removeWaiting(normalizedId);
+        delete this.modules[normalizedId];
+        delete this.instantiated[normalizedId];
+      } else if (this.parent) {
+        return this.parent.removeModule(normalizedId);
+      }
+    },
+
     /**
      * Triggers loading and resolution of modules. Outside callers of this
      * function should only pass id and refId. factoryTree is used
