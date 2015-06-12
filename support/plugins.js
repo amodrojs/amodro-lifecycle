@@ -41,7 +41,13 @@ protoModifiers.push(function (Lifecycle) {
 
   proto.normalize = function(id, refId) {
     var index = id.indexOf('!');
-    if (index > -1) {
+
+    // If a '!something' ID, then just remove the ! and continue on.
+    if (index === 0) {
+       id = id.substring(1);
+    }
+
+    if (index > 0) {
       var pluginId = this.normalize(id.substring(0, index), refId),
           plugin = this.getModule(pluginId),
           resourceId = id.substring(index + 1);
@@ -76,6 +82,10 @@ protoModifiers.push(function (Lifecycle) {
         var normalizedDep = this
                             .normalize(id.substring(0, index), normalizedId);
 
+        if (!normalizedDep) {
+          return;
+        }
+
         // Do not do extra work if the plugin has already been loaded.
         if (!hasProp(definedPlugins, normalizedId)) {
           definedPlugins[normalizedDep] = !!this.getModule(normalizedDep) &&
@@ -103,30 +113,35 @@ protoModifiers.push(function (Lifecycle) {
   proto.locate = function(normalizedId, suggestedExtension) {
     var pluginDesc = this.getPluginDesc(normalizedId);
     if (pluginDesc) {
-      // Allow for the full plugin ID to be in a bundle.
-      var bundleId = this.config._bundlesMap &&
-                     getOwn(this.config._bundlesMap, normalizedId);
+      if (!pluginDesc.id) {
+        // The badly formed '!something' case.
+        normalizedId = pluginDesc.resourceId;
+      } else {
+        // Allow for the full plugin ID to be in a bundle.
+        var bundleId = this.config._bundlesMap &&
+                       getOwn(this.config._bundlesMap, normalizedId);
 
-      if (bundleId && bundleId !== normalizedId) {
-        return oldMethods.locate.call(this, bundleId, suggestedExtension);
-      }
+        if (bundleId && bundleId !== normalizedId) {
+          return oldMethods.locate.call(this, bundleId, suggestedExtension);
+        }
 
-      var plugin = pluginDesc.plugin,
-          resourceId = pluginDesc.resourceId;
-      if (plugin) {
-        if (plugin.locate) {
-          return plugin.locate(this.getPluginProxy(),
-                               normalizedId, suggestedExtension);
-        } else if (hasProp(plugin, 'locateExtension')) {
-          return oldMethods.locate.call(this,
-                                        resourceId,
-                                        plugin.locateExtension);
-        } else if (plugin.locateDetectExtension) {
-          var index = resourceId.lastIndexOf('.');
-          if (index !== -1) {
+        var plugin = pluginDesc.plugin,
+            resourceId = pluginDesc.resourceId;
+        if (plugin) {
+          if (plugin.locate) {
+            return plugin.locate(this.getPluginProxy(),
+                                 normalizedId, suggestedExtension);
+          } else if (hasProp(plugin, 'locateExtension')) {
             return oldMethods.locate.call(this,
-                                          resourceId.substring(0, index),
-                                          resourceId.substring(index + 1));
+                                          resourceId,
+                                          plugin.locateExtension);
+          } else if (plugin.locateDetectExtension) {
+            var index = resourceId.lastIndexOf('.');
+            if (index !== -1) {
+              return oldMethods.locate.call(this,
+                                            resourceId.substring(0, index),
+                                            resourceId.substring(index + 1));
+            }
           }
         }
       }
@@ -137,59 +152,64 @@ protoModifiers.push(function (Lifecycle) {
   proto.fetch = function(normalizedId, location) {
     var pluginDesc = this.getPluginDesc(normalizedId);
     if (pluginDesc) {
-
-      // Allow for the full plugin ID to be in a bundle.
-      var bundleId = this.config._bundlesMap &&
-                     getOwn(this.config._bundlesMap, normalizedId);
-
-      if (bundleId && bundleId !== normalizedId) {
-        return oldMethods.fetch.call(this, bundleId, location);
-      }
-
-      var plugin = pluginDesc.plugin,
-          resourceId = pluginDesc.resourceId;
-
-      if (plugin) {
-        if (plugin.fetch) {
-          return plugin.fetch(this.getPluginProxy(), resourceId, location);
-        } else if (plugin.load) {
-          // Legacy loader plugin support.
-          return new Promise(function(resolve, reject) {
-            var onload = function(value) {
-              // old load() was like fetch + setModule
-              this.setModule(pluginDesc.id + '!' + resourceId,
-                             value);
-              resolve();
-            }.bind(this);
-            onload.error = reject;
-            onload.fromText = function(text, alt) {
-              // Very old plugins passed in a name, but not supported in
-              // the modern legacy format.
-              if (alt !== undefined) {
-                text = alt;
-              }
-
-              // In this case want the text to participate in transform
-              // and parsing.
-              resolve(text);
-            };
-
-            plugin.load(resourceId,
-                        makeRequire(this, pluginDesc.id),
-                        onload,
-                        {});
-          }.bind(this));
-        } else {
-          return oldMethods.fetch.call(this, resourceId, location);
-        }
+      if (!pluginDesc.id) {
+        // The badly formed '!something' case.
+        normalizedId = pluginDesc.resourceId;
       } else {
-        // Plugin not loaded yet. This could happen in the alias config case,
-        // where the 'a' is mapped to 'plugin!resource'. Unfortunately in that
-        // case cannot resolve a cycle if it exists between original module
-        // with dependency on 'a' but has a cycle with 'plugin!resource'.
-        return this.use(pluginDesc.id).then(function() {
-          return this.fetch(normalizedId, location);
-        }.bind(this));
+
+        // Allow for the full plugin ID to be in a bundle.
+        var bundleId = this.config._bundlesMap &&
+                       getOwn(this.config._bundlesMap, normalizedId);
+
+        if (bundleId && bundleId !== normalizedId) {
+          return oldMethods.fetch.call(this, bundleId, location);
+        }
+
+        var plugin = pluginDesc.plugin,
+            resourceId = pluginDesc.resourceId;
+
+        if (plugin) {
+          if (plugin.fetch) {
+            return plugin.fetch(this.getPluginProxy(), resourceId, location);
+          } else if (plugin.load) {
+            // Legacy loader plugin support.
+            return new Promise(function(resolve, reject) {
+              var onload = function(value) {
+                // old load() was like fetch + setModule
+                this.setModule(pluginDesc.id + '!' + resourceId,
+                               value);
+                resolve();
+              }.bind(this);
+              onload.error = reject;
+              onload.fromText = function(text, alt) {
+                // Very old plugins passed in a name, but not supported in
+                // the modern legacy format.
+                if (alt !== undefined) {
+                  text = alt;
+                }
+
+                // In this case want the text to participate in transform
+                // and parsing.
+                resolve(text);
+              };
+
+              plugin.load(resourceId,
+                          makeRequire(this, pluginDesc.id),
+                          onload,
+                          {});
+            }.bind(this));
+          } else {
+            return oldMethods.fetch.call(this, resourceId, location);
+          }
+        } else {
+          // Plugin not loaded yet. This could happen in the alias config case,
+          // where the 'a' is mapped to 'plugin!resource'. Unfortunately in that
+          // case cannot resolve a cycle if it exists between original module
+          // with dependency on 'a' but has a cycle with 'plugin!resource'.
+          return this.use(pluginDesc.id).then(function() {
+            return this.fetch(normalizedId, location);
+          }.bind(this));
+        }
       }
     }
 
