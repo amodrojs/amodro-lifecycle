@@ -11,7 +11,7 @@ console.log('GOT DEPEND: ' + normalizedId, deps);
       return Promise.resolve(deps);
     },
 
-    fetch: function (loader, resourceId, location) {
+    fetch: function (loader, resourceId, refId, location) {
       return loader.use(resourceId, module.id + '!' + resourceId)
       .then(function(moduleValue) {
         loader.setModule(module.id + '!' + resourceId, moduleValue);

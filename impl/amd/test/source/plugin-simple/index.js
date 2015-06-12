@@ -25,7 +25,7 @@ define(['module'], function(module) {
       return parsed.index + '?' + choices.join(':');
     },
 
-    fetch: function (loader, resourceId, location) {
+    fetch: function (loader, resourceId, refId, location) {
       return loader.use(parse(resourceId).choice, module.id + '!' + resourceId)
       .then(function(moduleValue) {
         // Do not return a value here, want the "source" for this module to

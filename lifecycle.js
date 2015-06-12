@@ -301,7 +301,7 @@ function Lifecycle(parent) {
         var location = this.top.locate(normalizedId, 'js');
         fslog(factoryTree, 'use: calling load: ' + normalizedId +
               ', ' + location);
-        return this.top.load(normalizedId, location, factoryTree);
+        return this.top.load(normalizedId, refId, location, factoryTree);
       }.bind(this))
       .then(function() {
         // If considered "instantiate" skip the dependency tracing for
@@ -352,11 +352,11 @@ function Lifecycle(parent) {
      * @param  {Array} factoryTree
      * @return {Promise}
      */
-    load: function(normalizedId, location, factoryTree) {
+    load: function(normalizedId, refId, location, factoryTree) {
       fslog(factoryTree, 'load: calling fetch, setting waiting: ' +
             normalizedId);
       return (this.waiting[normalizedId] =
-      ensurePromise(this.fetch(normalizedId, location))
+      ensurePromise(this.fetch(normalizedId, refId, location))
       .then(function(source) {
         fslog(factoryTree, 'load.fetch.then, source for: ' + normalizedId);
         log(source);
@@ -532,7 +532,7 @@ function Lifecycle(parent) {
              (suggestedExtension ? '.' + suggestedExtension : '');
     },
 
-    fetch: function(normalizedId, location) {
+    fetch: function(normalizedId, refId, location) {
       // async
       return Promise.resolve('');
     },

@@ -1,5 +1,5 @@
 /*global amodro */
-amodro.fetch = function(normalizedId, location, lifecycle) {
+amodro.fetch = function(normalizedId, refId, location, lifecycle) {
   'use strict';
   var jsSuffixRegExp = /\.js$/;
 

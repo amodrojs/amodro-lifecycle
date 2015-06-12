@@ -11,7 +11,7 @@ amodro.useXhr = function(normalizedId, location) {
   return !/\.js$/.test(location);
 };
 
-amodro.xhrFetch = function(normalizedId, location, responseType) {
+amodro.xhrFetch = function(normalizedId, refId, location, responseType) {
   return new Promise(function(resolve, reject) {
     var xhr = amodro.createXhr(normalizedId, location, responseType);
     if (responseType) {
@@ -42,7 +42,7 @@ amodro.xhrFetch = function(normalizedId, location, responseType) {
 
 if (typeof importScripts === 'function') {
 
-  amodro.scriptFetch = function(normalizedId, location, lifecycle) {
+  amodro.scriptFetch = function(normalizedId, refId, location, lifecycle) {
     return new Promise(function(resolve, reject) {
       try {
         importScripts(location);
@@ -56,7 +56,7 @@ if (typeof importScripts === 'function') {
 
 } else {
 
-  amodro.scriptFetch = function(normalizedId, location, lifecycle) {
+  amodro.scriptFetch = function(normalizedId, refId, location, lifecycle) {
     return new Promise(function(resolve, reject) {
       var script = document.createElement('script');
       script.setAttribute('data-amodromodule', normalizedId);
@@ -82,10 +82,10 @@ if (typeof importScripts === 'function') {
 
 }
 
-amodro.fetch = function(normalizedId, location, lifecycle) {
+amodro.fetch = function(normalizedId, refId, location, lifecycle) {
   if (amodro.useXhr(normalizedId, location)) {
-    return amodro.xhrFetch(normalizedId, location);
+    return amodro.xhrFetch(normalizedId, refId, location);
   } else {
-    return amodro.scriptFetch(normalizedId, location, lifecycle);
+    return amodro.scriptFetch(normalizedId, refId, location, lifecycle);
   }
 };

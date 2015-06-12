@@ -3,7 +3,7 @@ require('./tester')(module.id, function (loader, define, assert, done) {
 
   define('plugin', ['module'], function(module) {
     return {
-      fetch: function (loader, resourceId, location) {
+      fetch: function (loader, resourceId, refId, location) {
         return loader.use(resourceId, module.id + '!' + resourceId)
         .then(function(moduleValue) {
           loader.setModule(module.id + '!' + resourceId, moduleValue);

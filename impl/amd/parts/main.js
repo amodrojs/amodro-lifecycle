@@ -182,7 +182,7 @@ var amodro, define;
       return location;
     },
 
-    fetch: function(normalizedId, location) {
+    fetch: function(normalizedId, refId, location) {
       // async
       if (hasProp(this.fetchedLocations, location)) {
         var value = this.fetchedLocations[location];
@@ -202,7 +202,7 @@ var amodro, define;
         }
       } else {
         return (this.fetchedLocations[location] =
-                amodro.fetch(normalizedId, location, this)
+                amodro.fetch(normalizedId, refId, location, this)
                 .then(function (value) {
                   // Clear the promise to release holding on to possibly large
                   // fetched values, but still indicate the fetch was done.

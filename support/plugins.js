@@ -101,7 +101,7 @@ protoModifiers.push(function (Lifecycle) {
 
     if (plugins.length) {
       return Promise.all(plugins.map(function(pluginId) {
-        return this.useUnnormalized(pluginId, normalizedId);
+        return this.use(pluginId, normalizedId);
       }.bind(this))).then(function() {
         return oldMethods.depend.call(this, normalizedId, deps);
       }.bind(this));
@@ -149,7 +149,7 @@ protoModifiers.push(function (Lifecycle) {
     return oldMethods.locate.call(this, normalizedId, suggestedExtension);
   };
 
-  proto.fetch = function(normalizedId, location) {
+  proto.fetch = function(normalizedId, refId, location) {
     var pluginDesc = this.getPluginDesc(normalizedId);
     if (pluginDesc) {
       if (!pluginDesc.id) {
@@ -162,7 +162,7 @@ protoModifiers.push(function (Lifecycle) {
                        getOwn(this.config._bundlesMap, normalizedId);
 
         if (bundleId && bundleId !== normalizedId) {
-          return oldMethods.fetch.call(this, bundleId, location);
+          return oldMethods.fetch.call(this, bundleId, refId, location);
         }
 
         var plugin = pluginDesc.plugin,
@@ -170,7 +170,8 @@ protoModifiers.push(function (Lifecycle) {
 
         if (plugin) {
           if (plugin.fetch) {
-            return plugin.fetch(this.getPluginProxy(), resourceId, location);
+            return plugin.fetch(this.getPluginProxy(),
+                                resourceId, refId, location);
           } else if (plugin.load) {
             // Legacy loader plugin support.
             return new Promise(function(resolve, reject) {
@@ -194,12 +195,12 @@ protoModifiers.push(function (Lifecycle) {
               };
 
               plugin.load(resourceId,
-                          makeRequire(this, pluginDesc.id),
+                          makeRequire(this, refId),
                           onload,
                           {});
             }.bind(this));
           } else {
-            return oldMethods.fetch.call(this, resourceId, location);
+            return oldMethods.fetch.call(this, resourceId, refId, location);
           }
         } else {
           // Plugin not loaded yet. This could happen in the alias config case,
@@ -207,13 +208,13 @@ protoModifiers.push(function (Lifecycle) {
           // case cannot resolve a cycle if it exists between original module
           // with dependency on 'a' but has a cycle with 'plugin!resource'.
           return this.use(pluginDesc.id).then(function() {
-            return this.fetch(normalizedId, location);
+            return this.fetch(normalizedId, refId, location);
           }.bind(this));
         }
       }
     }
 
-    return oldMethods.fetch.call(this, normalizedId, location);
+    return oldMethods.fetch.call(this, normalizedId, refId, location);
   };
 
   function makeProxyMethod(proxy, methodName, instance) {

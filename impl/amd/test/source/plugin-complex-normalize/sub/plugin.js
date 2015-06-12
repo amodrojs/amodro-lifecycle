@@ -6,7 +6,7 @@ define(['module', 'sub/pluginDep'], function(module) {
         return loader.normalize(id, refId);
     },
 
-    fetch: function (loader, resourceId, location) {
+    fetch: function (loader, resourceId, refId, location) {
       loader.setModule(module.id + '!' + resourceId, resourceId);
     }
   };

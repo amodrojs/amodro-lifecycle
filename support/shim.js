@@ -17,7 +17,7 @@ protoModifiers.push(function (Lifecycle) {
 
   // If shim deps, fetch them before fetching the script.
   var oldFetch = proto.fetch;
-  proto.fetch = function(normalizedId, location) {
+  proto.fetch = function(normalizedId, refId, location) {
     var shim = this.config.shim;
     if (shim && hasProp(shim, normalizedId)) {
       shim = shim[normalizedId];
@@ -39,7 +39,7 @@ protoModifiers.push(function (Lifecycle) {
       }
 
       return p.then(function() {
-        return oldFetch.call(this, normalizedId, location);
+        return oldFetch.call(this, normalizedId, refId, location);
       }.bind(this))
       .then(function(value) {
         function factory() {
@@ -58,6 +58,6 @@ protoModifiers.push(function (Lifecycle) {
         return value;
       }.bind(this));
     }
-    return oldFetch.call(this, normalizedId, location);
+    return oldFetch.call(this, normalizedId, refId, location);
   };
 });
