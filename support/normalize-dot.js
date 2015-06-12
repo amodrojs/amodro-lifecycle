@@ -11,10 +11,10 @@ function dotNormalize(id, refId, returnArray) {
       // directory, 'one/two' for this normalization.
       idParts = refParts.slice(0, refParts.length - 1)
                   .concat(idParts);
-    } else if (id.indexOf('./') === 0) {
+    } else if (idParts[0].indexOf('./') === 0) {
       // Just trim it off, already at the top of the module ID space.
       idParts[0] = idParts[0].substring(2);
-    } else {
+    } else if (idParts[0] !== '.') {
       throw new Error('Invalid ID, oustide of the module ID space: ' +
                       id);
     }
