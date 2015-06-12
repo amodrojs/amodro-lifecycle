@@ -162,7 +162,13 @@ protoModifiers.push(function (Lifecycle) {
               resolve();
             }.bind(this);
             onload.error = reject;
-            onload.fromText = function(text) {
+            onload.fromText = function(text, alt) {
+              // Very old plugins passed in a name, but not supported in
+              // the modern legacy format.
+              if (alt !== undefined) {
+                text = alt;
+              }
+
               // In this case want the text to participate in transform
               // and parsing.
               resolve(text);
