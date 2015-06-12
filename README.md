@@ -40,7 +40,7 @@ The core of what a module system implements on top of Lifecycle are implementati
 
 * *String* **normalize** (*String* relativeId, *String* referenceId)
 * *String* **locate** (*String* normalizedId, *String* suggestedExtension)
-* *Promise* **fetch** (*String* normalizedId, *String* location)
+* *Promise* **fetch** (*String* normalizedId, *String* refId, *String* location)
 * *String* **translate** (*String* normalizedId, *String* location, *String* source)
 * **evaluate** (*String* normalizedId, *String* location, *String* source)
 * *Promise* **depend** (*String* normalizedId, *Array* deps)
@@ -72,13 +72,15 @@ This is useful for AMD-style loader plugin systems, which provide transpiler-typ
 
 #### fetch
 
-> *Promise* **fetch** (*String* normalizedId, *String* location)
+> *Promise* **fetch** (*String* normalizedId, *String* refId, *String* location)
 
 Asynchronously fetches the text at the location. The promise resolves to the text value of the fetch.
 
 For Node-style sync systems, it could decide to alter the running of the steps to skip this and directly call [evaluate](#evaluate) and [instantiate](#instantiate).
 
 In browser-based async systems, if using script tag loading, [evaluate](#evaluate) could be called directly and the [translate](#translate) step skipped, if the source text is not available.
+
+**refId** may be null or undefined. It is the normalized ID that first referred to the target normalizeId, and can be useful in some extensions like loader plugins that need to do other normalizations relative to that refId.
 
 #### translate
 
