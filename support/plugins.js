@@ -10,13 +10,8 @@ protoModifiers.push(function (Lifecycle) {
       customOverrides = {
         normalize: true,
         locate: true,
+        fetch: true,
         depend: true
-      },
-      // For fetches, want the default method impl to get the ID without the
-      // plugin name on it. For other hooks, that deal with data stored by
-      // full ID, pass the full ID.
-      useResourceId = {
-        fetch: true
       };
 
   function interceptMethod(methodName) {
@@ -26,34 +21,10 @@ protoModifiers.push(function (Lifecycle) {
       var pluginDesc = this.getPluginDesc(normalizedId);
       if (pluginDesc) {
         var plugin = pluginDesc.plugin;
-        if (plugin[methodName]) {
+        if (plugin && plugin[methodName]) {
           args[0] = pluginDesc.resourceId;
           args.unshift(this.getPluginProxy());
           return plugin[methodName].apply(this, args);
-        } else if (methodName === 'fetch' && plugin.load) {
-          // Legacy loader plugin support.
-          var p = new Promise(function(resolve, reject) {
-            var onload = function(value) {
-              // old load() was like fetch + setModule
-              this.setModule(pluginDesc.id + '!' + pluginDesc.resourceId,
-                             value);
-              resolve();
-            }.bind(this);
-            onload.error = reject;
-            onload.fromText = function(text) {
-              // In this case want the text to participate in transform
-              // and parsing.
-              resolve(text);
-            };
-
-            plugin.load(pluginDesc.resourceId,
-                        makeRequire(this, pluginDesc.id),
-                        onload,
-                        {});
-          }.bind(this));
-          return p;
-        } else if (useResourceId[methodName]) {
-          args[0] = pluginDesc.resourceId;
         }
       }
 
@@ -72,10 +43,10 @@ protoModifiers.push(function (Lifecycle) {
     var index = id.indexOf('!');
     if (index > -1) {
       var pluginId = this.normalize(id.substring(0, index), refId),
-          plugin = this.getModule(pluginId, true),
+          plugin = this.getModule(pluginId),
           resourceId = id.substring(index + 1);
 
-      if (plugin.normalize) {
+      if (plugin && plugin.normalize) {
         if (plugin.load) {
           // Legacy plugin API.
           return pluginId + '!' + plugin.normalize(resourceId, function(id) {
@@ -142,23 +113,72 @@ protoModifiers.push(function (Lifecycle) {
 
       var plugin = pluginDesc.plugin,
           resourceId = pluginDesc.resourceId;
-      if (plugin.locate) {
-        return plugin.locate(this.getPluginProxy(),
-                             normalizedId, suggestedExtension);
-      } else if (hasProp(plugin, 'locateExtension')) {
-        return oldMethods.locate.call(this,
-                                      resourceId,
-                                      plugin.locateExtension);
-      } else if (plugin.locateDetectExtension) {
-        var index = resourceId.lastIndexOf('.');
-        if (index !== -1) {
+      if (plugin) {
+        if (plugin.locate) {
+          return plugin.locate(this.getPluginProxy(),
+                               normalizedId, suggestedExtension);
+        } else if (hasProp(plugin, 'locateExtension')) {
           return oldMethods.locate.call(this,
-                                        resourceId.substring(0, index),
-                                        resourceId.substring(index + 1));
+                                        resourceId,
+                                        plugin.locateExtension);
+        } else if (plugin.locateDetectExtension) {
+          var index = resourceId.lastIndexOf('.');
+          if (index !== -1) {
+            return oldMethods.locate.call(this,
+                                          resourceId.substring(0, index),
+                                          resourceId.substring(index + 1));
+          }
         }
       }
     }
     return oldMethods.locate.call(this, normalizedId, suggestedExtension);
+  };
+
+  proto.fetch = function(normalizedId, location) {
+    var pluginDesc = this.getPluginDesc(normalizedId);
+    if (pluginDesc) {
+      var plugin = pluginDesc.plugin,
+          resourceId = pluginDesc.resourceId;
+
+      if (plugin) {
+        if (plugin.fetch) {
+          return plugin.fetch(this.getPluginProxy(), resourceId, location);
+        } else if (plugin.load) {
+          // Legacy loader plugin support.
+          return new Promise(function(resolve, reject) {
+            var onload = function(value) {
+              // old load() was like fetch + setModule
+              this.setModule(pluginDesc.id + '!' + resourceId,
+                             value);
+              resolve();
+            }.bind(this);
+            onload.error = reject;
+            onload.fromText = function(text) {
+              // In this case want the text to participate in transform
+              // and parsing.
+              resolve(text);
+            };
+
+            plugin.load(resourceId,
+                        makeRequire(this, pluginDesc.id),
+                        onload,
+                        {});
+          }.bind(this));
+        } else {
+          return oldMethods.fetch.call(this, resourceId, location);
+        }
+      } else {
+        // Plugin not loaded yet. This could happen in the alias config case,
+        // where the 'a' is mapped to 'plugin!resource'. Unfortunately in that
+        // case cannot resolve a cycle if it exists between original module
+        // with dependency on 'a' but has a cycle with 'plugin!resource'.
+        return this.use(pluginDesc.id).then(function() {
+          return this.fetch(normalizedId, location);
+        }.bind(this));
+      }
+    }
+
+    return oldMethods.fetch.call(this, normalizedId, location);
   };
 
   function makeProxyMethod(proxy, methodName, instance) {
@@ -191,7 +211,7 @@ protoModifiers.push(function (Lifecycle) {
         return {
           id: plugId,
           resourceId: normalizedId.substring(index + 1),
-          plugin: this.getModule(plugId, true)
+          plugin: this.getModule(plugId)
         };
       }
     },

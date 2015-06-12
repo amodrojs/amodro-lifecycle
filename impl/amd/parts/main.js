@@ -424,10 +424,12 @@ var amodro, define;
             }.bind(this));
           }.bind(this));
         } else {
-          if (!hasProp(this.config, key) && typeof value === 'object' &&
+          if (typeof value === 'object' &&
             value && !Array.isArray(value) && (typeof value !== 'function') &&
             !(value instanceof RegExp)) {
-            this.config[key] = {};
+            if(!hasProp(this.config, key)) {
+              this.config[key] = {};
+            }
             deepMix(this.config[key], cfg[key]);
           } else {
             this.config[key] = value;

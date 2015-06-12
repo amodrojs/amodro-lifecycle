@@ -3,6 +3,8 @@
 ## plugins:
 
 * test loading a plugin that had a depending on the module wanting to use it in a dependency.
+* alias config of 'c' asking for 'a' aliased to 'plugin!', but 'c' having a cycle with 'plugin!'.
+  Do not think the cycle can be broken in that case.
 * how to support config? like isBuild? Is it needed?
 
 ## parent/child loaders
@@ -33,7 +35,7 @@
 * comment out isBrowser/isBrowser.html in all.js, isBrowser on local require not
   supported any more.
 * comment out onResourceLoad/nestedRequire.html, require.onResourceLoad not supported.
-
+* paths/paths.html change data-requiremodule to data-amodromodule
 
 ## API work
 
