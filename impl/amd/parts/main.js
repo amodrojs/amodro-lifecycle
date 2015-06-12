@@ -49,14 +49,25 @@ var amodro, define;
         return instance.getDep(refId, normalizedDepId, true);
       }
 
-      var p = Promise.all(deps.map(function(dep) {
-        // If a require([]) call asks for require, just give back this
-        // function, since it is a context-specific dependency.
-        if (dep === 'require') {
-          return require;
+      // Start off with an async promise resolution to pick up waiting define
+      // calls that occcur directly after the require call. Addresses
+      // define('a'), require(['a', 'b']), define('b'): the define('b') should
+      // be absorbed that that require loader.
+      var p = Promise.resolve()
+      .then(function() {
+        if (defineQueue.length) {
+          instance.execCompleted();
         }
-        return instance.useUnnormalized(dep, refId);
-      }));
+
+        return Promise.all(deps.map(function(dep) {
+          // If a require([]) call asks for require, just give back this
+          // function, since it is a context-specific dependency.
+          if (dep === 'require') {
+            return require;
+          }
+          return instance.useUnnormalized(dep, refId);
+        }));
+      });
 
       if (callback) {
         p = p.then(function(ary) {
