@@ -30,6 +30,7 @@
 TODO:
 * secondLateConfigPlugin/secondLateConfigPlugin.html: need to figure out why
   it fails.
+* plugins/pluginNormalize/pluginNormalize.html: the plugA!plugB! case?
 
 * edit simple.html to not ask for URLs and remove moreSimpleTests = true.
 * toUrl-tests.js: no ../bower_components resolution because outside ID space.
