@@ -275,10 +275,13 @@ var amodro, define;
       }.bind(this)));
 
       if (ret === undefined) {
-        if (localExports) {
+        // Favor module.exports over just exports, as it is common for node
+        // modules to assign to module.exports over using the default created
+        // exports object.
+        if (localModule) {
+          return this.registry[normalizedId].module.exports;
+        } else if (localExports) {
           return this.modules[normalizedId];
-        } else if (localModule) {
-          return localModule.exports;
         }
       } else if (ret) {
         return ret;
