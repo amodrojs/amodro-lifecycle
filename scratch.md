@@ -58,7 +58,7 @@ Changes:
 * Disable undef/undefLocal.html, promise errbacks do not work that way.
 * errorContinueLocal, comment out the if (err.requireModules part, then setTimeout works.
 * Disable error/globalOnError.html, don't want to favor a global handler over local one.
-
+* Disable error/requireErrback.html, callback/errback relation to calling different now.
 For undef tests, the requirejs.onError needs to return a promise that will
 resolve to new module value. Example from undef.html test:
 
