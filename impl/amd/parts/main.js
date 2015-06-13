@@ -476,6 +476,14 @@ var amodro, define;
   lcProto.use = function(normalizedId, refId, factoryTree) {
     return oldUse.apply(this, arguments).catch(function (err) {
       if (this.handleUseError) {
+        // Clear from the factoryTree depIds tracking of modules it has seen.
+        // This mean the reset is only for the .use() factoryTree that triggered
+        // this error. Issues for other factoryTrees in play? May be better to
+        // do this in
+        if (hasProp(factoryTree.depIds, normalizedId)) {
+          delete factoryTree.depIds[normalizedId];
+          factoryTree.depCount -= 1;
+        }
         return this.handleUseError(err, normalizedId, refId, factoryTree);
       }
       throw err;
