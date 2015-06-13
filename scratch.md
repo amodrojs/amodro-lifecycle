@@ -57,6 +57,7 @@ Changes:
 * Disable remoteUrls/remoteUrls.html, module outside ID space.
 * Disable undef/undefLocal.html, promise errbacks do not work that way.
 * errorContinueLocal, comment out the if (err.requireModules part, then setTimeout works.
+* Disable error/globalOnError.html, don't want to favor a global handler over local one.
 
 For undef tests, the requirejs.onError needs to return a promise that will
 resolve to new module value. Example from undef.html test:
@@ -73,7 +74,9 @@ resolve to new module value. Example from undef.html test:
     });
 - do same in undefEnforceShim.html
 
-
+* pluginErrorContinueLocal: remove the `err.requireModules && ` check.
+* defineErrorLocal.html: comment out if (err.requireType === 'define') { and
+  the doh.is("define", err.requireType); test.
 
 ## API work
 

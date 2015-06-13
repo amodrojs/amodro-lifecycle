@@ -1,11 +1,24 @@
 /*jshint strict: false */
-/*global amodro, requirejs, Lifecycle, jsSuffixRegExp */
+/*global amodro, Lifecycle, jsSuffixRegExp, hasProp */
 var oldConfigure = Lifecycle.prototype.configure;
 
 Lifecycle.prototype.configure = function(cfg) {
   if (cfg.paths) {
-    cfg.locations = cfg.paths;
+    cfg.locations = {};
+
+    // paths array fallback support.
+    Object.keys(cfg.paths).forEach(function(prefix) {
+      var value = cfg.paths[prefix];
+      if (Array.isArray(value)) {
+        var fallbacks = this._requirejsFallbacks ||
+                        (this._requirejsFallbacks = {});
+        fallbacks[prefix] = value;
+        value = value.shift();
+      }
+      cfg.locations[prefix] = value;
+    }.bind(this));
   }
+
   if (cfg.map) {
     cfg.alias = cfg.map;
   }
@@ -52,11 +65,27 @@ amodro._onRequirejsDefined = function(requirejs) {
 
   var proto = Lifecycle.prototype;
   proto.handleUseError = function(error, normalizedId, refId, factoryTree) {
+    var fallbacks = this._requirejsFallbacks;
+    if (fallbacks && hasProp(fallbacks, normalizedId)) {
+      var fallback = fallbacks[normalizedId];
+      if (fallback.length) {
+        var value = fallback.shift();
+        this.removeModule(normalizedId);
+        var cfg = {
+          locations: {}
+        };
+        cfg.locations[normalizedId] = value;
+        this.configure(cfg);
+        return this.use(normalizedId, refId, factoryTree);
+      }
+    }
+
     if (requirejs.onError) {
       // Construct error object to match old requirejs style.
       error.requireModules = [normalizedId];
       return requirejs.onError(error);
     }
+
     throw error;
   };
 };
