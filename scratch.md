@@ -55,6 +55,8 @@ Changes:
 * jsonp.html: put in paths change for user: "https://api.github.com/users/jrburke?callback=define", no direct URL loading supported.
 * Disable relative/outsideBaseUrl/a/outsideBaseUrl.html, outside module ID space.
 * Disable remoteUrls/remoteUrls.html, module outside ID space.
+* Disable undef/undefLocal.html, promise errbacks do not work that way.
+* errorContinueLocal, comment out the if (err.requireModules part, then setTimeout works.
 
 For undef tests, the requirejs.onError needs to return a promise that will
 resolve to new module value. Example from undef.html test:
@@ -69,6 +71,8 @@ resolve to new module value. Example from undef.html test:
             reject(err);
         });
     });
+- do same in undefEnforceShim.html
+
 
 
 ## API work
