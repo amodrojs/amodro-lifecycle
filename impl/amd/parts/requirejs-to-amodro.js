@@ -70,12 +70,29 @@ amodro._onRequirejsDefined = function(requirejs) {
       var fallback = fallbacks[normalizedId];
       if (fallback.length) {
         var value = fallback.shift();
+
         this.removeModule(normalizedId);
+        // Clear from the factoryTree depIds tracking of modules it has seen.
+        // This means the reset is only for the .use() factoryTree that
+        // triggered this error. Issues for other factoryTrees in play?
+        // Done here because if requirejs.onError is taken, flow is different.
+        // While this is somewhat OK for a temporary adapter, might want to
+        // formalize something in main or lifecycle around doing this kind of
+        // reset if handleUseError returns a promise? Does not quite work for
+        // the requirejs.onError case though. Maybe just skip this backwards
+        // compat attempt and just formalize a higher level error retry
+        // mechanism.
+        if (factoryTree && hasProp(factoryTree.depIds, normalizedId)) {
+          delete factoryTree.depIds[normalizedId];
+          factoryTree.depCount -= 1;
+        }
+
         var cfg = {
           locations: {}
         };
         cfg.locations[normalizedId] = value;
         this.configure(cfg);
+
         return this.use(normalizedId, refId, factoryTree);
       }
     }
