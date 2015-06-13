@@ -74,7 +74,24 @@ var permutations = {
     'suffix.js': ''
   },
 
-  // Base amodro, with some requirejs api support and includes prim.
+  // Base amodro, with some requirejs api support, using native promises.
+  'amodro-requirejs': {
+    '../../../support/prim.js': '',
+    'prim-to-promise.js': '',
+    'fetch.js': 'fetch/browser-script-worker.js',
+    'suffix.js': 'suffix/requirejs-to-amodro.js'
+  },
+  // Same as aboev, but with debug logs
+  'amodro-requirejs-debug': {
+    keepLog: true,
+    '../../../support/prim.js': '',
+    'prim-to-promise.js': '',
+    'fetch.js': 'fetch/browser-script-worker.js',
+    'suffix.js': 'suffix/requirejs-to-amodro.js'
+  },
+
+  // Base amodro, with some requirejs api support and includes prim for a
+  // promise shim.
   'amodro-requirejs-prim': {
     'fetch.js': 'fetch/browser-script-worker.js',
     'suffix.js': 'suffix/requirejs-to-amodro.js'

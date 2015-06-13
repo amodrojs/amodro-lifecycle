@@ -55,13 +55,21 @@ llProtoModifiers.push(function (proto) {
 
   } else {
 
-    proto.scriptFetch = function(normalizedId, refId, location) {
-      return new Promise(function(resolve, reject) {
+    proto.createScriptNode = function(config, normalizedId, refId, location) {
         var script = document.createElement('script');
-        script.setAttribute('data-amodromodule', normalizedId);
-        script.type = this.config.scriptType || 'text/javascript';
+        script.type = config.scriptType || 'text/javascript';
         script.charset = 'utf-8';
         script.async = true;
+        return script;
+    };
+
+    proto.scriptFetch = function(normalizedId, refId, location) {
+      return new Promise(function(resolve, reject) {
+        var script = this.createScriptNode(this.config,
+                                           normalizedId, refId, location);
+
+        script.setAttribute('data-amodromodule', normalizedId);
+        script.setAttribute('data-amodroref', refId);
 
         script.addEventListener('load', function () {
             this.execCompleted(normalizedId);
