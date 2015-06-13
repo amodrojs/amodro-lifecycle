@@ -90,3 +90,85 @@ resolve to new module value. Example from undef.html test:
 * pluginErrorContinueLocal: remove the `err.requireModules && ` check.
 * defineErrorLocal.html: comment out if (err.requireType === 'define') { and
   the doh.is("define", err.requireType); test.
+
+
+# Event emitting
+
+Considered, but hard to do in base lifecycle, since the steps are overridable,
+and in the case of loader plugins, they can call the lifecycle methods without
+necessarily triggering the events.
+
+Best to place it at higher levels, where assumptions on overrides are more set.
+So in a browser loader case, these interceptions have been useful:
+
+* once locate is called, to add cache preserving/breaking info to URL.
+  Do this in fetch overrides, where the URLs are actually used.
+* once a module is instantiated. Some want general export mangling.
+  This is onResourceLoad in requirejs. Do that in amodro instantiate override.
+
+Sketch for maybe a mixin addon:
+
+add this.events to constructor, then:
+
+    // Start event emitter API
+    on: function(id, fn) {
+      var listeners = this.events[id];
+      if (!listeners) {
+        listeners = this.events[id] = [];
+      }
+      if (listeners.indexOf(fn) === -1) {
+        listeners.push(fn);
+      }
+    },
+
+    removeListener: function(id, fn) {
+      var i,
+          listeners = this.events[id];
+      if (listeners) {
+        i = listeners.indexOf(fn);
+        if (i !== -1) {
+          listeners.splice(i, 1);
+        }
+        if (listeners.length === 0) {
+          delete this.events[id];
+        }
+      }
+    },
+
+    emit: function(id, event) {
+      if (this.top !== this) {
+        this.top.emit(id, event);
+      } else {
+        var listeners = this.events[id];
+        if (listeners) {
+          listeners.forEach(function(fn) {
+            try {
+              fn.call(null, event);
+            } catch (e) {
+              // Throw at later turn so that other listeners
+              // can complete. While this messes with the
+              // stack for the error, continued operation is
+              // valued more in this tradeoff.
+              // This also means we do not need to .catch()
+              // for the wrapping promise.
+              setTimeout(function() {
+                throw e;
+              });
+            }
+          });
+        }
+      }
+    },
+
+    emitFn: function(fnName, args) {
+      var value = this[fnName].apply(this, args);
+      var evt = {
+        result: value,
+        args: args
+
+      };
+      this.emit(fnName, evt);
+      return evt.result;
+    },
+    // End event emitter API
+
