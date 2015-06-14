@@ -68,8 +68,11 @@ llProtoModifiers.push(function (proto) {
         var script = this.createScriptNode(this.config,
                                            normalizedId, refId, location);
 
+        if (refId) {
+          script.setAttribute('data-amodroref', refId);
+        }
+
         script.setAttribute('data-amodromodule', normalizedId);
-        script.setAttribute('data-amodroref', refId);
 
         script.addEventListener('load', function () {
             this.execCompleted(normalizedId);

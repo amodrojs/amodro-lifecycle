@@ -441,6 +441,14 @@ var amodro, define;
               this.config._bundlesMap[value] = key;
             }.bind(this));
           }.bind(this));
+        } else if (key === 'after') {
+          Object.keys(value).forEach(function(key) {
+            var prevFn = this[key];
+            this[key] = function() {
+              var result = prevFn.apply(this, arguments);
+              return value[key].apply(this, [result].concat(arguments));
+            };
+          }.bind(this));
         } else {
           if (typeof value === 'object' &&
             value && !Array.isArray(value) && (typeof value !== 'function') &&
@@ -568,8 +576,15 @@ var amodro, define;
     return loader;
   }
 
-  // Set up default loader under amodro name.
-  if (typeof amodro === 'undefined') {
+  // Set up default loader under amodro name, but only if it is not already
+  // defined.
+  if (typeof amodro !== 'function') {
+    // If a value assume a starting config.
+    var startConfig;
+    if (amodro) {
+      startConfig = amodro;
+    }
+
     amodro = createLoader();
     amodro.createLoader = createLoader;
 
@@ -596,6 +611,12 @@ var amodro, define;
     };
 
     //INSERT requirejs-to-amodro.js
+
+    if (startConfig) {
+      amodro.config(startConfig);
+    }
+
+    //INSERT script-attr-loading.js
   }
 
 

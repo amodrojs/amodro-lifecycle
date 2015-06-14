@@ -1,0 +1,39 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mocha Tests</title>
+  <link rel="stylesheet" href="../../../../../node_modules/mocha/mocha.css" />
+</head>
+<body>
+  <div id="mocha"></div>
+  <!-- <script src="expect.js"></script> -->
+  <script src="../../../../../node_modules/mocha/mocha.js"></script>
+  <script src="../../chai.js"></script>
+  <script>mocha.setup('bdd'); var assert = chai.assert;</script>
+
+  <script src="../../../amodro.js"
+          data-baseurl="js"
+          data-parallel="a,b"
+          data-serial="c,d"></script>
+
+  <script>
+  // Wait a bit of time for all modules to load, make sure to wait until they
+  // are actually loaded then run the results.
+  setTimeout(function() {
+    amodro(['a', 'b', 'c', 'd'], function(a, b, c, d) {
+      describe('script-attr-load', function() {
+        it('parallel', function() {
+          assert.equal('a', a.name);
+          assert.equal('b', b.name);
+        });
+        it('serial', function() {
+          assert.equal('c', c.name);
+          assert.equal('dc', d.name);
+        });
+      });
+      mocha.run();
+    });
+  }, 1000);
+  </script>
+</body>
+</html>
