@@ -22,11 +22,11 @@ TOC:
 
 The core of this project is lifecycle.js It is implemented as a plain JavaScript constructor function with prototype. No hidden state. Since this is still under development, transparency into the operation is useful, as the design is shaped by implementation tests. That could change over time, where some APIs or state becomes hidden as it proven out in some module system experiments.
 
-Use the lifecycle.js as the basis for the module loader. Wrap and extend it to provide specific module system APIs. See the `impl` directory for examples.
+Use the lifecycle.js as the basis for the module loader. Wrap and extend it to provide specific module system APIs.
 
-Eventually the impl examples will be put in their own repos. amodro, an AMD module loader with streamlined config and an improved loader plugin API, will use Lifecycle as its core.
+See [amodro-base](https://github.com/amodrojs/amodro-base) as an example. Also see that repo for most of the tests. While there is a test directory in this repo, the code is being primarily tested in the loader wrapper repos.
 
-It could also be used in the development of an ES loader, and as part of an experimental patch to node to experiment with bridging ES modules with Node's traditional module system.
+lifecycle.js could also be used in the development of an ES loader, and as part of an experimental patch to node to experiment with bridging ES modules with Node's traditional module system.
 
 ## Lifecycle
 

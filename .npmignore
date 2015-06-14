@@ -1,7 +1,5 @@
 build/
-impl/
-support/
 test/
 .jshintrc
-scratch.txt
+scratch.md
 *.sh
