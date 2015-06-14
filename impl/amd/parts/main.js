@@ -380,8 +380,9 @@ var amodro, define;
           if (i === anon.length - 1 && !foundId) {
             this.addToRegistry(normalizedId, anonEntry[0], anonEntry[1]);
           } else {
-            console.error('Mismatched define. Ignoring, but a sign of a ' +
-                          'loading setup problem: ' + anonEntry);
+            console.error('Mismatched define. A sign of a page setup '+
+                          'problem, and will likely cause other errors: ' +
+                          anonEntry);
           }
         }
       }
