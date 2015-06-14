@@ -13,12 +13,12 @@ if (typeof Promise === 'undefined') {
 }
 
 var overrides = {
-  locate: function(id) {
+  locate: function(normalizedId, suggestedExtension) {
     // sync
-    return this.baseUrl + '/' + id + '.js';
+    return this.baseUrl + '/' + normalizedId + '.' + suggestedExtension;
   },
 
-  fetch: function(id, refId, location) {
+  fetch: function(normalizedId, refId, location) {
     // async
     return new Promise(function(resolve, reject) {
       fs.readFile(location, 'utf8', function(err, text) {

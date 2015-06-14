@@ -8,11 +8,10 @@ if (typeof Promise === 'undefined') {
   var Promise = require('./support/prim');
 }
 
-/*
-Assumes the JS environment has these capabilities:
-- Promise
-- Function.prototype.bind
-*/
+/**
+ * amodro-lifecycle 0.0.2 (c) 2015, The Dojo Foundation All Rights Reserved.
+ * MIT or new BSD license.
+ */
 
 function Lifecycle(parent) {
   'use strict';
@@ -22,7 +21,7 @@ function Lifecycle(parent) {
   this.instantiated = {};
   this.registry = {};
   this.waiting = {};
-  this.factorySequences = [];
+  this.factoryTrees = [];
 }
 
 (function() {
@@ -60,6 +59,44 @@ function Lifecycle(parent) {
       return Promise.resolve(value);
     }
     return value;
+  }
+
+  function trace(instance, id, order, found, cycleDetected) {
+    var registeredEntry = instance.getRegistered(id);
+
+    // May already be defined, no longer in registry and that is OK. Another
+    // factoryTree took care of it.
+    if (!registeredEntry) {
+      return;
+    }
+
+    var deps = registeredEntry.registered.deps;
+    deps.forEach(function(depId) {
+      if (instance.isSpecialDep(depId)) {
+        return;
+      }
+
+      if (hasProp(found, depId)) {
+        if (!hasProp(cycleDetected, depId)) {
+          cycleDetected[depId] = true;
+          instance.cycleDetected(depId, order);
+        }
+      } else {
+        // A separate found map for each dependency, so that trees like this
+        // do not end up with baz executing before bar:
+        // foo -> bar, baz
+        // baz -> bar
+        // If the found map is shared, can end up with execution order:
+        // [baz, bar, foo], where bar should be before baz.
+        var depFound = {};
+        depFound[depId] = true;
+        Object.keys(found).forEach(function(key) {
+          depFound[key] = true;
+        });
+        order.unshift(depId);
+        trace(instance, depId, order, depFound, cycleDetected);
+      }
+    });
   }
 
   var fsIdCounter = 0;
@@ -104,6 +141,30 @@ function Lifecycle(parent) {
       }
     },
 
+    /**
+     * Returns true if the loader contains a module for the module ID. It may
+     * not actually be defined yet though, may still in process of loading, so
+     * to get a handle on it, use async APIs to get to it.
+     * @param  {String}  normalizedId
+     * @return {Boolean}
+     */
+    containsModule: function(normalizedId) {
+      return hasProp(this.modules, normalizedId) ||
+        hasProp(this.registry, normalizedId) ||
+        (this.parent && this.parent.containsModule(normalizedId));
+    },
+
+    /**
+     * Returns true if there is a module value for the given ID. The value may
+     * not be fully defined yet, for a module in a cycle.
+     * @param  {String} normalizedId
+     * @return {Boolean}
+     */
+    hasModule: function(normalizedId) {
+      return hasProp(this.modules, normalizedId) ||
+             (this.parent && this.parent.hasModule(normalizedId));
+    },
+
     getModule: function(normalizedId, throwOnMiss) {
       if (hasProp(this.modules, normalizedId)) {
         return this.modules[normalizedId];
@@ -126,19 +187,32 @@ function Lifecycle(parent) {
       return value;
     },
 
+    removeModule: function(normalizedId) {
+      if (hasProp(this.modules, normalizedId) ||
+          hasProp(this.waiting, normalizedId) ||
+          hasProp(this.registry, normalizedId)) {
+        this.removeRegistered(normalizedId);
+        this.removeWaiting(normalizedId);
+        delete this.modules[normalizedId];
+        delete this.instantiated[normalizedId];
+      } else if (this.parent) {
+        return this.parent.removeModule(normalizedId);
+      }
+    },
+
     /**
      * Triggers loading and resolution of modules. Outside callers of this
-     * function should only pass id and refId. factorySequence is used
+     * function should only pass id and refId. factoryTree is used
      * internally to track recursive tracing of modules and proper cycle
      * breaking.
      * @param  {String} id              The string ID of the module
      * @param  {String} refId           A reference module ID, used to normalize
      * the id value to an absolute ID.
-     * @param  {Array} [factorySequence] Used internally to track execution
+     * @param  {Array} [factoryTree] Used internally to track execution
      * order based on dependency tree.
      * @return {Promise}                 Promise, resolves to module ID value.
      */
-    useUnnormalized: function(id, refId, factorySequence) {
+    useUnnormalized: function(id, refId, factoryTree) {
       var normalizedId;
 
             // Top level use calls may be loader plugin resources, so ask for depend
@@ -151,23 +225,23 @@ function Lifecycle(parent) {
         } catch (e) {
           moduleError(id + ', ' + refId, e);
         }
-        return this.use(normalizedId, refId, factorySequence);
+        return this.use(normalizedId, refId, factoryTree);
       }.bind(this));
     },
 
     /**
      * Triggers loading and resolution of modules after an ID has been
      * normalized. Outside callers of this function should only pass id and
-     * refId. factorySequence is used internally to track recursive tracing of
+     * refId. factoryTree is used internally to track recursive tracing of
      * modules and proper cycle breaking.
      * @param  {String} normalizedId    The normalized string ID of the module
      * @param  {String} refId           A reference module ID, used to relate
      * this use call to another module for cycle/dependency tracing.
-     * @param  {Array} [factorySequence] Used internally to track execution
+     * @param  {Array} [factoryTree] Used internally to track execution
      * order based on dependency tree.
      * @return {Promise}                 Promise, resolves to module ID value.
      */
-    use: function(normalizedId, refId, factorySequence) {
+    use: function(normalizedId, refId, factoryTree) {
       var instantiated = false;
 
       return Promise.resolve().then(function() {
@@ -178,38 +252,25 @@ function Lifecycle(parent) {
           return;
         }
 
-        if (!factorySequence) {
-          this.factorySequences.push(factorySequence = {
+        if (!factoryTree) {
+          this.factoryTrees.push(factoryTree = {
             desc: (refId || '[Top]') + ' asking for ' + normalizedId +
                   ' (id' + (fsIdCounter++) + ')',
             depCount: 0,
-            depOrder: [],
-            depIds: {},
-            cycleDetected: {}
+            startRefId: refId,
+            startId: normalizedId,
+            depIds: {}
           });
 
-          
-          // Indicate refId as already being in the factorySequence, so
-          // if it shows up in execution sequence later, it is considered a
-          // cycle.
-          if (refId) {
-            factorySequence.depIds[refId] = true;
-          }
-        }
+                  }
 
-        if (hasProp(factorySequence.depIds, normalizedId)) {
-          if (!hasProp(factorySequence.cycleDetected, normalizedId)) {
-            factorySequence.cycleDetected[normalizedId] = true;
-            this.cycleDetected(normalizedId, factorySequence.depOrder);
-          }
-
-          // Return from here to break the cycle
+        if (hasProp(factoryTree.depIds, normalizedId)) {
+          // Return from here, ID already known.
           instantiated = true;
           return;
         } else {
-          factorySequence.depCount += 1;
-          factorySequence.depOrder.unshift(normalizedId);
-          factorySequence.depIds[normalizedId] = true;
+          factoryTree.depCount += 1;
+          factoryTree.depIds[normalizedId] = true;
         }
 
         // If already waiting on the module, then just wait for it.
@@ -233,39 +294,44 @@ function Lifecycle(parent) {
                     return (record.instance.waiting[normalizedId] =
             record.instance.callDepend(normalizedId,
                                        registered.deps,
-                                       factorySequence));
+                                       factoryTree));
         }
 
         // Not already waiting or in registry, needs to be fetched/loaded.
         var location = this.top.locate(normalizedId, 'js');
-                return this.top.load(normalizedId, location, factorySequence);
+                return this.top.load(normalizedId, refId, location, factoryTree);
       }.bind(this))
       .then(function() {
         // If considered "instantiate" skip the dependency tracing for
-        // factorySequence. Could really be instantiated or a cycle that should
+        // factoryTree. Could really be instantiated or a cycle that should
         // be considered "instantiated" to resolve the cycle.
         if (instantiated) {
           return;
         }
 
         // Now that the module has had its deps normalized, use them all, and
-        // track them on the factorySequence. Need this to happen for every
-        // factorySequence that comes through to poperly get full dependency
+        // track them on the factoryTree. Need this to happen for every
+        // factoryTree that comes through to poperly get full dependency
         // chain. But only needs to be done if module is still in registry
         // waiting completion of full processing.
         var record = this.getRegistered(normalizedId);
         if (record) {
-          return this.useDeps(normalizedId,
-                              record.registered.deps,
-                              factorySequence);
+          var deps = record.registered.deps;
+          if (!deps || !deps.length) {
+            return;
+          }
+
+          return Promise.all(deps.map(function(depId) {
+            return this.use(depId, normalizedId, factoryTree);
+          }.bind(this)));
         }
       }.bind(this))
       .then(function() {
         
         // If the ID was part of a factory sequence, indicate complete. It may
         // not be if the module was already in modules.
-        if (factorySequence && !instantiated) {
-          this.factorySequenceDepComplete(factorySequence);
+        if (factoryTree && !instantiated) {
+          this.factoryTreeDepComplete(factoryTree);
         }
         var value = this.getModule(normalizedId);
 
@@ -274,15 +340,16 @@ function Lifecycle(parent) {
     },
 
     /**
-     * Used internally by lifecycle to complete the load of a resource.
+     * Used internally by lifecycle to complete the load of a resource. Results
+     * in a waiting promise set for the normalizedId.
      * @param  {String} normalizedId
      * @param  {String} location
-     * @param  {Array} factorySequence
+     * @param  {Array} factoryTree
      * @return {Promise}
      */
-    load: function(normalizedId, location, factorySequence) {
+    load: function(normalizedId, refId, location, factoryTree) {
             return (this.waiting[normalizedId] =
-      ensurePromise(this.fetch(normalizedId, location))
+      ensurePromise(this.fetch(normalizedId, refId, location))
       .then(function(source) {
                 
         try {
@@ -304,20 +371,10 @@ function Lifecycle(parent) {
           
           return this.top.callDepend(normalizedId,
                                      registered.deps,
-                                     factorySequence);
+                                     factoryTree);
         } catch (e) {
           moduleError(normalizedId, e);
         }
-      }.bind(this)));
-    },
-
-    useDeps: function(normalizedId, deps, factorySequence) {
-      if (!deps || !deps.length) {
-        return;
-      }
-
-      return Promise.all(deps.map(function(depId) {
-        return this.use(depId, normalizedId, factorySequence);
       }.bind(this)));
     },
 
@@ -350,7 +407,7 @@ function Lifecycle(parent) {
      * @param  {Array} deps
      * @return {Promise}
      */
-    callDepend: function(normalizedId, deps, factorySequence) {
+    callDepend: function(normalizedId, deps, factoryTree) {
       
       if (!deps || !deps.length) {
         return Promise.resolve([]);
@@ -374,23 +431,37 @@ function Lifecycle(parent) {
     },
 
     /**
-     * Used in internally. Should not be called directly. When a dependency
+     * Used internally. Should not be called directly. When a dependency
      * loads, checks to see if a whole dependency chain is loaded, and if so,
-     * calls the factory functions based on the depOrder specified in the
-     * factorySequence.
-     * @param  {Array} factorySequence
+     * calls the factory functions based on the dependency order specified by
+     * tracing the dependencies for the ID that started the factoryTree.
+     * @param  {Array} factoryTree
      */
-    factorySequenceDepComplete: function(factorySequence) {
-      factorySequence.depCount -= 1;
+    factoryTreeDepComplete: function(factoryTree) {
+      factoryTree.depCount -= 1;
 
       
-      if (factorySequence.depCount !== 0) {
+      if (factoryTree.depCount !== 0) {
         return;
       }
 
       // Sequences are now complete, execute factories for the dependency chain
-      // in the right order, as according to depOrder.
-      var order = factorySequence.depOrder;
+      // in the right order. Trace the dep tree to find the right order.
+      var startId = factoryTree.startId,
+          order = [startId],
+          found = {};
+
+      found[startId] = true;
+
+      // If a starting refId, could be something like a loader plugin that asked
+      // for a dynamic load of dependencies, which in turn could depend on the
+      // loader plugin resource. Allow breaking that chain here.
+//todo: create test case to exercise this code.
+      if (factoryTree.startRefId) {
+        found[factoryTree.startRefId] = true;
+      }
+
+      trace(this, startId, order, found, {});
 
       
       for (var i = 0; i < order.length; i++) {
@@ -398,7 +469,7 @@ function Lifecycle(parent) {
             registeredEntry = this.getRegistered(depId);
 
         //registered may not exist, dependency could have already been handled
-        //by a different factorySequence, and that is OK.
+        //by a different factoryTree, and that is OK.
         if (!registeredEntry) {
           continue;
         }
@@ -416,9 +487,9 @@ function Lifecycle(parent) {
       }
 
       // Clean up.
-      var index = this.factorySequences.indexOf(factorySequence);
+      var index = this.factoryTrees.indexOf(factoryTree);
       if (index !== -1) {
-        this.factorySequences.splice(index, 1);
+        this.factoryTrees.splice(index, 1);
       }
     },
 
@@ -438,7 +509,7 @@ function Lifecycle(parent) {
              (suggestedExtension ? '.' + suggestedExtension : '');
     },
 
-    fetch: function(normalizedId, location) {
+    fetch: function(normalizedId, refId, location) {
       // async
       return Promise.resolve('');
     },
@@ -477,6 +548,15 @@ function Lifecycle(parent) {
       return factory(deps.map(function(dep) {
         return this.getModule(dep);
       }.bind(this)));
+    },
+
+    /**
+     * Some module systems have special dependencies, like the require,
+     * exports, module ones in AMD modules. That kind of loader can implement
+     * this method to avoid some of the noise with module logging and tracing.
+     */
+    isSpecialDep: function(normalizedId) {
+      return false;
     }
   };
 }());
