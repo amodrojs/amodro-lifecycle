@@ -1,5 +1,5 @@
 /**
- * amodro-lifecycle 0.1.0 (c) 2015, The Dojo Foundation All Rights Reserved.
+ * amodro-lifecycle 0.1.1 (c) 2015, The Dojo Foundation All Rights Reserved.
  * MIT or new BSD license.
  */
 

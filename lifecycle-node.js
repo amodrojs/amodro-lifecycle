@@ -9,7 +9,7 @@ if (typeof Promise === 'undefined') {
 }
 
 /**
- * amodro-lifecycle 0.0.2 (c) 2015, The Dojo Foundation All Rights Reserved.
+ * amodro-lifecycle 0.1.1 (c) 2015, The Dojo Foundation All Rights Reserved.
  * MIT or new BSD license.
  */
 
