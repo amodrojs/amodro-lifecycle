@@ -2,14 +2,13 @@
 
 JS module loader lifecycle engine. Not a module system itself, but a building block used to construct a specific module system.
 
-Still in early development, but it is promising.
-
 Feature set goals:
 
 * Multiple loader instances.
 * cycle detection and proper ordering of module execution.
 * parent/child loaders for the possibility of nested modules, with a "top" loader used for fetches.
-* Enough flexibility in API use to allow synchronous or asynchronous module loaders.
+* Sticks with ES5 syntax and exposed internals on the Lifecycle prototype, to allow easier inspection and wider deployment to browsers in use today.
+* Enough flexibility in the API so that it works in the browser and in node, even allowing legacy node modules to participate as dependencies for ES2015 modules.
 
 TOC:
 
@@ -20,13 +19,17 @@ TOC:
 
 ## Usage
 
-The core of this project is lifecycle.js It is implemented as a plain JavaScript constructor function with prototype. No hidden state. Since this is still under development, transparency into the operation is useful, as the design is shaped by implementation tests. That could change over time, where some APIs or state becomes hidden as it proven out in some module system experiments.
+The core of this project is lifecycle.js. It is implemented as a plain JavaScript constructor function with prototype. No hidden state. Since this is still under development, transparency into the operation is useful, as the design is shaped by implementation tests. That could change over time, where some APIs or state becomes hidden as it proven out in some module system experiments.
 
 Use the lifecycle.js as the basis for the module loader. Wrap and extend it to provide specific module system APIs.
 
-See [amodro-base](https://github.com/amodrojs/amodro-base) as an example. Also see that repo for most of the tests. While there is a test directory in this repo, the code is being primarily tested in the loader wrapper repos.
+Example wrappings:
 
-lifecycle.js could also be used in the development of an ES loader, and as part of an experimental patch to node to experiment with bridging ES modules with Node's traditional module system.
+
+* [amodrojs/amodro-base](https://github.com/amodrojs/amodro-base): AMD and adapting ES syntax to an AMD underpinning. Includes loader plugin support, './' and '../' relative ID normalization to a module ID space, loader config for paths and module ID aliasing.
+* [amodrojs/node-es-adapt](https://github.com/amodrojs/node-es-adapt): ES module syntax in node, allowing ES modules to use traditional node modules as dependencies. Uses node's ID normalization and adds loader plugin support.
+
+Also see those repos for most of the tests. While there is a test directory in this repo, the code is being primarily tested in the loader wrapper repos, as the goal of this project is to be wrapped by other code to complete a module system.
 
 ## Lifecycle
 
@@ -186,7 +189,7 @@ For AMD-style loader plugins, the module system has a chance to parse the unnorm
 
 With the management APIs like `addToRegistry`, bundling multiple modules in a file works great, where the module definitions are held until they are part of a top level dependency chain.
 
-The `impl` example for AMD is pretty far along, and it seems to be working out well.
+See the [amodrojs/amodro-base repo](https://github.com/amodrojs/amodro-base) for working code along these lines.
 
 ### Node
 
@@ -196,19 +199,11 @@ The combo of synchronous `normalize` and `locate` allows Node to synchronously f
 
 Top level application loads could use the full async fetch and depend steps, to allow ES modules and something like AMD loader plugins to work for ES modules that might use that kind of mechanism.
 
-However, instead of instantiating its traditional modules as part of the normal Lifecycle chain, it could decide to wait until its module meta does a `require()` call.
-
-I believe it could work out particularly if ES modules define a module meta concept, and node could even "transpile" the ES syntax to, for example, convert `import` identifiers to module meta gets, that Node could intercept.
-
-Some of that is a bit hand wavy, but I believe there is a very good shot of it working out that node could ingest the bulk of its traditional modules and have them live beside ES modules.
-
 For `require(Expression)` type of dependencies, if it is for a module ID that is a legacy module, for the Lifecycle-style approach, normalization/locating/evaluating/setModule are all synchronous in that approach, so it could work out.
 
 If the`require(Expression)` expression resolves to the ID for an ES module (or one of the nested dependencies do), I could see Node providing something like a `require.async()` for that case (for modules written in its traditional style).
 
-I believe this would be fine, as it just affects new modules written explicitly in ES format, so not a backwards compatibility issue. If an older module decided to depend on an ES module after its initial release, that seems like a "breaking change" kind of major version rev in the semver release approach.
-
-More experimenting needs to happen there, but it feels much more achievable than the approach where most of the lifecycle steps are asynchronous.
+This approach is working in the [node-es-adapt repo](https://github.com/amodrojs/node-es-adapt).
 
 ### ES module support in the browser
 
