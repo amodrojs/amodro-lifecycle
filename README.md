@@ -44,7 +44,7 @@ The core of what a module system implements on top of Lifecycle are implementati
 * *String* **locate** (*String* normalizedId, *String* suggestedExtension)
 * *Promise* **fetch** (*String* normalizedId, *String* refId, *String* location)
 * *String* **translate** (*String* normalizedId, *String* location, *String* source)
-* **evaluate** (*String* normalizedId, *String* location, *String* source)
+* **parse** (*String* normalizedId, *String* location, *String* source)
 * *Promise* **depend** (*String* normalizedId, *Array* deps)
 * *Object* **instantiate** (*String* normalizedId, *Array* deps, *Function* factory)
 
@@ -78,9 +78,9 @@ This is useful for AMD-style loader plugin systems, which provide transpiler-typ
 
 Asynchronously fetches the text at the location. The promise resolves to the text value of the fetch.
 
-For Node-style sync systems, it could decide to alter the running of the steps to skip this and directly call [evaluate](#evaluate) and [instantiate](#instantiate).
+For Node-style sync systems, it could decide to alter the running of the steps to skip this and directly call [parse](#parse) (which could also execute the script) and [instantiate](#instantiate).
 
-In browser-based async systems, if using script tag loading, [evaluate](#evaluate) could be called directly and the [translate](#translate) step skipped, if the source text is not available.
+In browser-based async systems, if using script tag loading, [parse](#parse) and [translate](#translate) step skipped, if the source text is not available. The end result just needs to be an entry in the registry via [addToRegistry](#addtoregistry)
 
 **refId** may be null or undefined. It is the normalized ID that first referred to the target normalizeId, and can be useful in some extensions like loader plugins that need to do other normalizations relative to that refId.
 
@@ -92,13 +92,13 @@ Allows translating the source. Useful for transpiled languages.
 
 In browser systems, this may not be called for script tag-loaded resources.
 
-#### evaluate
+#### parse
 
-> **evaluate** (*String* normalizedId, *String* location, *String* source)
+> **parse** (*String* normalizedId, *String* location, *String* source)
 
-Evaluates the text, after [translate](#translate) is run (if it is run). The implementation could be something like `eval`, or in Node, a script run via the `vm` module.
+Parses the text, after [translate](#translate) is run (if it is run). The implementation could include something like `eval`, or in Node, a script run via the `vm` module. For ES modules, it could just be a parsing out of the dependencies without executing the source.
 
-The result of evaluate should be one or more entries in the registry, via calls to [addToRegistry](#addtoregistry), or set module values via [setModule](#setmodule).
+The result of parse should be one or more entries in the registry, via calls to [addToRegistry](#addtoregistry), or set module values via [setModule](#setmodule).
 
 #### depend
 
@@ -156,7 +156,7 @@ For non-bundling cases, this method should be called as the result of one or mor
 
 * [fetch](#fetch)
 * [translate](#translate)
-* [evaluate](#evaluate)
+* [parse](#parse)
 
 The registry entries are what are passed to the [instantiate](#instantiate) step.
 
@@ -218,9 +218,9 @@ I can see an ES module loader defined for the browser using the general approach
 
 1) Has a default fetch implementation, something that is analogous to script fetching, but: fetch/translate with CORS: If a fetch is done that does not allow access via CORS, then the ES loader treats this similar to the script tag type of loading: translate() gets called with an empty string, or maybe is not called at all, and the loader would evaluate the text in accordance with the boundaries set in item 2).
 
-A new CORS property might be needed if there is a concern about intranets that allowed * origins for CORS and did not expect this type of use. In that case, the translate() step is only run with the real text if the property was set. Otherwise, translate is skipped but evaluate can be run on the original script, similar to how script tags operate today.
+A new CORS property might be needed if there is a concern about intranets that allowed * origins for CORS and did not expect this type of use. In that case, the translate() step is only run with the real text if the property was set. Otherwise, translate is skipped but evaluation of the original script can still occur, similar to how script tags operate today.
 
-2) evaluate() would not fall under the CSP eval policies, but policies similar to the ones that govern how script tags can be used. A new CSP directive could be introduced for this case. The main point is that it is not "eval" but more like how scripts are evaluated, but with the translate step applying (if it qualified in item 1).
+2) Script evaluation would not fall under the CSP eval policies, but policies similar to the ones that govern how script tags can be used. A new CSP directive could be introduced for this case. The main point is that it is not "eval" but more like how scripts are evaluated, but with the translate step applying (if it qualified in item 1).
 
 The goal with these items is to allow module loading of JS as it works today with script tags to continue to work with plain JS files in a module loader, and not require a new CORS property to get the equivalent of script tag fetching and execution.
 

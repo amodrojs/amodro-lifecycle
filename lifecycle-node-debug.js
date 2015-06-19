@@ -40,11 +40,6 @@ function Lifecycle(parent) {
     return log(fsId + ' ' + msg);
   }
 
-  function evaluate(lifecycle, normalizedId, location, source) {
-    /*jshint evil: true */
-    eval(source);
-  }
-
   var hasOwn = Object.prototype.hasOwnProperty;
   function hasProp(obj, prop) {
       return hasOwn.call(obj, prop);
@@ -405,12 +400,12 @@ function Lifecycle(parent) {
           }
 
           // Some cases, like script tag-based loading, do not have source to
-          // evaluate, hidden by browser security restrictions from seeing the
+          // parse, hidden by browser security restrictions from seeing the
           // source.
           if (typeof source === 'string' && source) {
-            fslog(factoryTree, 'load.fetch.then calling evaluate: ' +
+            fslog(factoryTree, 'load.fetch.then calling parse: ' +
                   normalizedId);
-            this.evaluate(normalizedId, location, source);
+            this.parse(normalizedId, location, source);
           }
 
           var registered = getOwn(this.registry, normalizedId);
@@ -576,22 +571,28 @@ function Lifecycle(parent) {
     },
 
     /**
-     * Evaluates the source a of module. May not apply in some module
-     * situations, like AMD modules loaded via script tags. Can be overridden if
-     * execution should happen differently. For instance, in node, perhaps using
-     * the vm module to execute the script. Or for loader plugins, making sure
-     * the evaluated result gets converted to registry entries.
+     * Parse the source a of module. May not apply in some module situations,
+     * like AMD modules loaded via script tags, where the parse and script
+     * evaluation happens as part of fetch. Can be overridden if parsing should
+     * happen differently. For instance, in node, perhaps using the vm module to
+     * execute the script as a means of parsing it and resulting in registry
+     * entries.. Or for loader plugins, making sure the parsed result gets
+     * converted to registry entries in some way.
      *
-     * The result of the execution should place result in a this.registry entry,
-     * if the module has dependencies and wants to export a specific module
-     * value.
+     * If it is called and a previous lifecycle step has not done so, parse
+     * should result in a this.registry entry for the given module, if the
+     * module has dependencies and wants to export a specific module value.
      *
      * @param  {String} normalizedId
      * @param  {String} location
      * @param  {String} source
      */
-    evaluate: function(normalizedId, location, source) {
-      evaluate(this, normalizedId, location, source);
+    parse: function(normalizedId, location, source) {
+      /*jshint evil: true*/
+      // Sync
+      // This is just a placeholder so basic tests do something useful.
+      var lifecycle = this;
+      eval(source);
     },
 
     depend: function(normalizedId, deps) {
