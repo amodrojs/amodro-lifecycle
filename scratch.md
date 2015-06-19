@@ -1,8 +1,5 @@
 ## todo:
 
-* rename evaluate to parse?
-* a getData(normalizedId) for property bags, and put it in amodro-base proxy object?
-
 ## Curiousities
 
 1) define('a'), require(['a', 'b']), define('b'): the define('b') should be absorbed that that require loader. At least in requirejs test it is expected. So inline definitions should be treated as hoisted? Which is different than what is happening in requirejs, but related concept.
