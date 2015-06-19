@@ -1,4 +1,7 @@
-* plugin-delegated not working, wants to do delgated!r!a where r is aliased to refine. So, nested loader plugin use. Can this work? See also requirejs plugins/pluginNormalize/pluginNormalize.html.
+## todo:
+
+* rename evaluate to parse?
+* a getData(normalizedId) for property bags, and put it in amodro-base proxy object?
 
 ## Curiousities
 
