@@ -25,9 +25,8 @@ Use the lifecycle.js as the basis for the module loader. Wrap and extend it to p
 
 Example wrappings:
 
-
-* [amodrojs/amodro-base](https://github.com/amodrojs/amodro-base): AMD and adapting ES syntax to an AMD underpinning. Includes loader plugin support, './' and '../' relative ID normalization to a module ID space, loader config for paths and module ID aliasing.
-* [amodrojs/node-es-adapt](https://github.com/amodrojs/node-es-adapt): ES module syntax in node, allowing ES modules to use traditional node modules as dependencies. Uses node's ID normalization and adds loader plugin support.
+* [amodrojs/amodro-base](https://github.com/amodrojs/amodro-base): AMD loader in the browser. Includes loading ES2015 modules, loader plugin support, './' and '../' relative ID normalization to a module ID space, loader config for locations and module ID aliasing.
+* [amodrojs/node-es-adapt](https://github.com/amodrojs/node-es-adapt): ES2015 module syntax in node, allowing ES modules to use traditional node modules as dependencies. Uses node's ID normalization and adds loader plugin support.
 
 Also see those repos for most of the tests. While there is a test directory in this repo, the code is being primarily tested in the loader wrapper repos, as the goal of this project is to be wrapped by other code to complete a module system.
 
@@ -160,6 +159,14 @@ For non-bundling cases, this method should be called as the result of one or mor
 * [evaluate](#evaluate)
 
 The registry entries are what are passed to the [instantiate](#instantiate) step.
+
+#### getData
+
+> *Object* **getData** (*String* normalizedId)
+
+Gets a mutable object that can be used to store data related to the normalizedId.
+
+This is useful for allowing coordination of state between lifecycle steps.
 
 #### setModule
 

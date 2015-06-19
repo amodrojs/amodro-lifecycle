@@ -21,6 +21,10 @@ var overrides = {
   fetch: function(normalizedId, refId, location) {
     // async
     return new Promise(function(resolve, reject) {
+      // Test out getData()
+      var data = this.getData(normalizedId);
+      data.fetchMessage = normalizedId + ' fetched';
+
       fs.readFile(location, 'utf8', function(err, text) {
         if (err) {
           reject(err);
@@ -28,7 +32,7 @@ var overrides = {
           resolve(text);
         }
       });
-    });
+    }.bind(this));
   },
 
   translate: function(normalizedId, location, source) {
@@ -55,7 +59,9 @@ var overrides = {
       return this.getModule(fullId);
     }.bind(this);
 
-    return factory(need);
+    var mod = factory(need);
+    mod.fetchMessage = this.getData(normalizedId).fetchMessage;
+    return mod;
   }
 };
 
@@ -70,8 +76,11 @@ describe('basic', function() {
 
     lc.use('a').then(function(a) {
       assert.equal(a.name, 'a');
+      assert.equal(a.fetchMessage, 'a fetched');
       assert.equal(a.b.name, 'b');
+      assert.equal(a.b.fetchMessage, 'b fetched');
       assert.equal(a.b.c.name, 'c');
+      assert.equal(a.b.c.fetchMessage, 'c fetched');
       done();
     }).catch(function(err) {
       done(err);

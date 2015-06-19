@@ -12,6 +12,7 @@ function Lifecycle(parent) {
   this.registry = {};
   this.waiting = {};
   this.factoryTrees = [];
+  this.data = {};
 }
 
 (function() {
@@ -200,6 +201,16 @@ function Lifecycle(parent) {
       } else if (this.parent) {
         return this.parent.removeModule(normalizedId);
       }
+    },
+
+    /**
+     * Gets a mutable object that is specific to the normalizedId. Allows state
+     * coordination between lifecycle steps and overrides.
+     * @param  {String} normalizedId
+     * @return {Object}
+     */
+    getData: function(normalizedId) {
+      return this.data[normalizedId] || (this.data[normalizedId] = {});
     },
 
     /**
